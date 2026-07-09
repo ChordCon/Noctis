@@ -1,7 +1,7 @@
 {
   "name": "sheets",
   "version": "0.1.0",
-  "homepage": "https://ChordCon.github.io/Noctis/",
+  "homepage": "https://ChordCon.github.io/Noctis/#/",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
