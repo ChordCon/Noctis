@@ -1,0 +1,825 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./Caller.css";
+import { db } from "./firebase/firebase";
+import {
+  doc,
+  updateDoc,
+  getDoc,
+  addDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+} from "firebase/firestore";
+
+const Caller = ({ user, checkAndLogout }) => {
+  const [showCreateModal, setShowCreateModal] = useState(false); // 생성 팝업 상태
+  const [sheetConfig, setSheetConfig] = useState(null); // 시트지 데이터 (행/열/이름)
+  // Caller 컴포넌트 내부에 상태 추가
+  const [itemLists, setItemLists] = useState({
+    weapons: [],
+    OffHand: [],
+    Helmet: [],
+    Armor: [],
+    Shoes: [],
+    Cape: [],
+    Food: [],
+    Potion: [],
+  });
+  const [cellImages, setCellImages] = useState({}); // { "파티-행-열": "이미지URL" }
+  const [sheetData, setSheetData] = useState({}); // { "pIdx-r-c": value }
+  const [mySheets, setMySheets] = useState([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedSheetForUpload, setSelectedSheetForUpload] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const verifyCaller = async () => {
+      // Caller는 'caller' 권한(또는 admin)이 필요함
+      const isTampered = await checkAndLogout("caller");
+
+      // 변조되었으면 checkAndLogout 내부에서 로그아웃 처리가 되므로
+      // 여기서는 이동만 막으면 됩니다.
+      if (isTampered) {
+        navigate("/");
+      }
+    };
+
+    verifyCaller();
+  }, [checkAndLogout, navigate]);
+
+  // 열에 대한 너비 설정 (단위: px)
+  // 병합된 열(Helmet~Potion)은 2개 칸을 차지하므로 너비를 넉넉히 잡습니다.
+  const colWidths = [
+    "70px", // Roll
+    "300px", // Comment
+    "200px", // Weapon
+    "160px", // Off-Hand
+    "160px", // Helmet (2칸)
+    "160px",
+    "160px", // Armor (2칸)
+    "160px",
+    "160px", // Shoes (2칸)
+    "160px",
+    "180px", // Cape (2칸)
+    "180px",
+    "230px", // Food (2칸)
+    "230px",
+    "150px", // Potion (2칸)
+    "150px",
+  ];
+
+  const colCategoryMap = {
+    2: "weapons", // 2번 인덱스부터 아이템 시작
+    3: "OffHand",
+    4: "Helmet",
+    5: "Helmet",
+    6: "Armor",
+    7: "Armor",
+    8: "Shoes",
+    9: "Shoes",
+    10: "Cape",
+    11: "Cape",
+    12: "Food",
+    13: "Food",
+    14: "Potion",
+    15: "Potion",
+  };
+  // 무기 데이터 로드
+  useEffect(() => {
+    const fetchAllItems = async () => {
+      const categories = [
+        "weapons",
+        "OffHand",
+        "Helmet",
+        "Armor",
+        "Shoes",
+        "Cape",
+        "Food",
+        "Potion",
+      ];
+      const newLists = {};
+
+      for (const cat of categories) {
+        const snap = await getDoc(doc(db, cat, "list"));
+        if (snap.exists()) {
+          const data = snap.data();
+          newLists[cat] = Object.keys(data)
+            .map((key) => ({
+              name: key,
+              url: data[key],
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
+        } else {
+          newLists[cat] = [];
+        }
+      }
+      setItemLists(newLists);
+    };
+    fetchAllItems();
+  }, []);
+
+  //콜러의 시트 목록을 가져오는 함수
+  useEffect(() => {
+    const fetchMySheets = async () => {
+      // 디버깅: user 정보와 name이 제대로 넘어오는지 확인
+      console.log("현재 유저 정보:", user);
+
+      if (!user?.name) {
+        console.log("user.name이 없습니다.");
+        return;
+      }
+
+      try {
+        const sheetsRef = collection(db, "sheets");
+        const q = query(sheetsRef, where("callerName", "==", user.name));
+        const querySnapshot = await getDocs(q);
+
+        // 디버깅: 문서 개수 확인
+        console.log("가져온 문서 개수:", querySnapshot.size);
+
+        const list = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMySheets(list);
+      } catch (e) {
+        console.error("시트 목록 로드 실패:", e);
+      }
+    };
+
+    fetchMySheets();
+  }, [user]);
+
+  // 시트 선택 클릭 핸들러 (이 부분을 수정하세요)
+  const loadSheet = (sheet) => {
+    setSheetConfig({
+      name: sheet.sheetName,
+      rows: sheet.rowCount,
+      id: sheet.id,
+    });
+    setSheetData(sheet.data || {});
+    // cellImages 처리는 useEffect로 이관
+  };
+  useEffect(() => {
+    if (!sheetConfig || !sheetData) return;
+
+    const newCellImages = {};
+    Object.keys(sheetData).forEach((key) => {
+      const [pIdx, r, c] = key.split("-");
+      const catKey = colCategoryMap[c];
+
+      if (catKey && itemLists[catKey]) {
+        const itemName = sheetData[key];
+        const item = itemLists[catKey].find((i) => i.name === itemName);
+        if (item?.url) {
+          newCellImages[key] = item.url;
+        }
+      }
+    });
+    setCellImages(newCellImages);
+  }, [sheetData, itemLists, sheetConfig]); // 데이터나 아이템 목록이 준비되면 실행
+
+  // 저장 함수
+  const saveSheet = async () => {
+    try {
+      if (sheetConfig.id) {
+        // 기존 시트 수정 로직
+        const docRef = doc(db, "sheets", sheetConfig.id);
+        await updateDoc(docRef, { data: sheetData, updatedAt: new Date() });
+
+        setMySheets((prev) =>
+          prev.map((s) =>
+            s.id === sheetConfig.id ? { ...s, data: sheetData } : s,
+          ),
+        );
+
+        alert("수정되었습니다!");
+      } else {
+        // 신규 시트 저장 로직
+        const newSheetData = {
+          callerName: user.name,
+          sheetName: sheetConfig.name,
+          rowCount: sheetConfig.rows,
+          data: sheetData,
+          createdAt: new Date(),
+        };
+
+        const docRef = await addDoc(collection(db, "sheets"), newSheetData);
+
+        // 신규 추가된 시트 정보를 리스트에 반영
+        setMySheets((prev) => [...prev, { id: docRef.id, ...newSheetData }]);
+
+        // 저장 후에는 신규 상태를 수정 상태로 변경 (ID 부여)
+        setSheetConfig((prev) => ({ ...prev, id: docRef.id }));
+
+        alert("저장되었습니다!");
+      }
+    } catch (e) {
+      console.error("저장 실패:", e);
+      alert("저장에 실패했습니다.");
+    }
+  };
+  // 시트지 업로드
+  const handleUpload = async (e) => {
+    e.preventDefault();
+
+    if (!selectedSheetForUpload) {
+      alert("대상 시트지를 먼저 선택해주세요.");
+      return;
+    }
+
+    const formData = new FormData(e.target);
+
+    // 날짜 데이터 수집
+    const year = formData.get("year");
+    const month = formData.get("month");
+    const day = formData.get("day");
+    const dateString = `${year}-${month}-${day}`; // 예: "2026-07-08"
+
+    const rawData = selectedSheetForUpload.data;
+    const formattedData = {};
+
+    // 데이터 재배치 로직은 그대로 유지...
+    Object.keys(rawData).forEach((key) => {
+      const [pIdx, r, c] = key.split("-").map(Number);
+      const value = rawData[key];
+      if (c === 0) formattedData[`${pIdx}-${r}-0`] = value;
+      else if (c === 1) formattedData[`${pIdx}-${r}-17`] = value;
+      else if (c >= 2 && c <= 15)
+        formattedData[`${pIdx}-${r}-${c + 1}`] = value;
+    });
+
+    const rowCount = selectedSheetForUpload.rowCount;
+    const partyCount = Math.ceil(rowCount / 20);
+    for (let pIdx = 0; pIdx < partyCount; pIdx++) {
+      const rowsInParty = Math.min(20, rowCount - pIdx * 20);
+      for (let r = 0; r < rowsInParty; r++) {
+        formattedData[`${pIdx}-${r}-1`] = "";
+        formattedData[`${pIdx}-${r}-2`] = "";
+      }
+    }
+
+    try {
+      await addDoc(collection(db, "records"), {
+        callerName: user.name,
+        sheetName: selectedSheetForUpload.sheetName,
+        sheetId: selectedSheetForUpload.id,
+        sheetContent: formattedData,
+        date: dateString, // 날짜 필드 추가
+        time: formData.get("time"),
+        weaponTier: formData.get("weaponTier"),
+        armorTier: formData.get("armorTier"),
+        foodTier: formData.get("foodTier"),
+        createdAt: new Date(),
+      });
+      alert("업로드되었습니다!");
+      setShowUploadModal(false);
+    } catch (e) {
+      console.error("업로드 실패:", e);
+      alert("업로드 실패: " + e.message);
+    }
+  };
+
+  const deleteSheet = async () => {
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+
+    try {
+      // 1. Firebase에서 삭제
+      await deleteDoc(doc(db, "sheets", sheetConfig.id));
+
+      // 2. 화면에 보여주는 목록에서 즉시 삭제 (새로고침 없이 반영)
+      setMySheets((prev) =>
+        prev.filter((sheet) => sheet.id !== sheetConfig.id),
+      );
+
+      alert("삭제되었습니다.");
+
+      // 3. 시트지 뷰 종료
+      setSheetConfig(null);
+      setSheetData({});
+      setCellImages({});
+    } catch (e) {
+      console.error("삭제 실패:", e);
+      alert("삭제에 실패했습니다.");
+    }
+  };
+
+  // 시트지 생성 로직
+  const handleCreateSheet = async (e) => {
+    e.preventDefault();
+    const name = e.target.sheetName.value;
+    const rows = parseInt(e.target.rowCount.value);
+
+    try {
+      const docRef = await addDoc(collection(db, "sheets"), {
+        callerName: user.name,
+        sheetName: name,
+        rowCount: rows,
+        data: {}, // DB에는 빈 데이터 저장
+        createdAt: new Date(),
+      });
+
+      setSheetConfig({ name, rows, id: docRef.id });
+      setSheetData({}); // <--- 이 부분이 핵심: 생성 시 이전 데이터 삭제
+      setCellImages({}); // <--- 이전 이미지들도 삭제
+      setShowCreateModal(false);
+    } catch (e) {
+      console.error("생성 실패:", e);
+    }
+  };
+
+  // 2. 시트지 생성 팝업
+  if (showCreateModal) {
+    return (
+      <div className="modal-overlay">
+        <div className="login-modal">
+          <form onSubmit={handleCreateSheet} className="login-form">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              style={{
+                position: "absolute",
+                top: "10px",
+                right: "10px",
+                background: "transparent",
+                border: "none",
+                color: "#fff",
+                fontSize: "1.5rem",
+                cursor: "pointer",
+                lineHeight: "1",
+              }}
+            >
+              &times;
+            </button>
+            <h2>시트지 생성</h2>
+            <input name="sheetName" placeholder="시트지 이름" required />
+            <input name="rowCount" type="number" placeholder="행 수" required />
+            <button type="submit">다음</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (sheetConfig) {
+    const { rows, name } = sheetConfig;
+    const headers = [
+      "Roll",
+      "Comment",
+      "Weapon",
+      "Off-Hand",
+      "Helmet",
+      "Armor",
+      "Shoes",
+      "Cape",
+      "Food",
+      "Potion",
+    ];
+    const partyData = [];
+    for (let i = 0; i < rows; i += 20) {
+      partyData.push({
+        partyName: `${Math.floor(i / 20) + 1}파티`,
+        data: [...Array(Math.min(20, rows - i))],
+      });
+    }
+
+    return (
+      <div style={{ margin: "20px 20px 0 20px" }}>
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "10px",
+              marginBottom: "20px",
+            }}
+          >
+            <button
+              className="add-btn"
+              onClick={() => {
+                setSheetConfig(null);
+                setSheetData({}); // 필요 시 데이터 초기화
+              }}
+            >
+              이 전
+            </button>
+            <button className="add-btn" onClick={saveSheet}>
+              저 장
+            </button>
+            <button
+              className="add-btn"
+              onClick={deleteSheet}
+              style={{ background: "#dc3545" }} // 빨간색 계열로 구분
+            >
+              삭 제
+            </button>
+            <button
+              onClick={() => {
+                setSheetConfig(null);
+                setSheetData({}); // 필요 시 데이터 초기화
+                setSelectedSheetForUpload({
+                  id: sheetConfig.id,
+                  sheetName: sheetConfig.name,
+                  data: sheetData, // 여기서 현재 수정 중인 sheetData가 들어가는지 확인
+                });
+                setShowUploadModal(true);
+              }}
+              className="add-btn"
+            >
+              업로드
+            </button>
+          </div>
+          <h2>{name}</h2>
+        </div>
+        {partyData.map((party, pIdx) => (
+          <div key={pIdx} style={{ marginBottom: "40px" }}>
+            <h3>{party.partyName}</h3>
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto", // 가로 스크롤 허용
+                overflowY: "auto", // 내용이 길어지면 세로 스크롤도 여기서 발생
+                maxHeight: "60vh", // 화면 높이의 60%를 넘으면 내부 스크롤 발생
+                border: "1px solid #555",
+              }}
+            >
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  color: "white",
+                  width: "100%",
+                  minWidth: "2690px", // 테이블이 찌그러지지 않도록 최소 너비 지정
+                  tableLayout: "fixed",
+                }}
+              >
+                <colgroup>
+                  {colWidths.map((w, index) => (
+                    <col key={index} style={{ width: w }} />
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr style={{ background: "#333" }}>
+                    {headers.map((h, i) => (
+                      <th
+                        key={h}
+                        colSpan={i >= 4 ? 2 : 1}
+                        style={{
+                          fontSize: "16px",
+                          border: "1px solid #555",
+                          padding: "8px 0",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {party.data.map((_, r) => (
+                    <tr key={r}>
+                      {Array(18)
+                        .fill()
+                        .map((_, c) => {
+                          const cellKey = `${pIdx}-${r}-${c}`;
+                          const catKey = colCategoryMap[c]; // 해당 열의 컬렉션 키 확인
+                          const list = itemLists[catKey]; // 위에서 만든 itemLists에서 리스트 가져오기
+                          return (
+                            <td
+                              key={c}
+                              style={{
+                                width: colWidths[c],
+                                padding: "4px",
+                                border: "1px solid #555",
+                              }}
+                            >
+                              {c === 0 ? (
+                                // Roll 드롭다운
+                                <select
+                                  value={sheetData[cellKey] || ""}
+                                  onChange={(e) =>
+                                    setSheetData((prev) => ({
+                                      ...prev,
+                                      [cellKey]: e.target.value,
+                                    }))
+                                  }
+                                  style={{
+                                    width: "100%",
+                                    transition: "width 0.2s", // 부드러운 애니메이션
+                                    background: "#222",
+                                    color: "white",
+                                  }}
+                                >
+                                  <option value="">선택</option>
+                                  {[
+                                    "Call",
+                                    "Def",
+                                    "Sup",
+                                    "Debuf",
+                                    "DPS",
+                                    "Heal",
+                                    "BM",
+                                  ].map((o) => (
+                                    <option key={o} value={o}>
+                                      {o}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : c === 1 ? (
+                                /* [신규] Comment 입력창 */
+                                <input
+                                  value={sheetData[cellKey] || ""}
+                                  onChange={(e) =>
+                                    setSheetData((prev) => ({
+                                      ...prev,
+                                      [cellKey]: e.target.value,
+                                    }))
+                                  }
+                                  style={{
+                                    width: "100%",
+                                    background: "transparent",
+                                    color: "white",
+                                    border: "none",
+                                  }}
+                                  placeholder="코멘트 입력"
+                                />
+                              ) : list ? (
+                                // [수정] 무기 포함 모든 아이템 열의 통합 드롭다운
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                  }}
+                                >
+                                  {cellImages[cellKey] && (
+                                    <img
+                                      src={cellImages[cellKey]}
+                                      style={{
+                                        width: "25px",
+                                        height: "25px",
+                                      }}
+                                      alt="item"
+                                    />
+                                  )}
+                                  <select
+                                    value={sheetData[cellKey] || ""}
+                                    onChange={(e) => {
+                                      const name = e.target.value;
+                                      const url = list.find(
+                                        (w) => w.name === name,
+                                      )?.url;
+                                      setSheetData((prev) => ({
+                                        ...prev,
+                                        [cellKey]: name,
+                                      }));
+                                      setCellImages((prev) => ({
+                                        ...prev,
+                                        [cellKey]: url,
+                                      }));
+                                    }}
+                                    style={{
+                                      flex: 1,
+                                      background: "#222",
+                                      color: "white",
+                                      border: "none",
+                                    }}
+                                  >
+                                    <option value="">선택</option>
+                                    {list.map((o) => (
+                                      <option key={o.name} value={o.name}>
+                                        {o.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : (
+                                // 그 외 일반 입력란 (Name 등)
+                                <input
+                                  value={sheetData[cellKey] || ""}
+                                  onChange={(e) =>
+                                    setSheetData((prev) => ({
+                                      ...prev,
+                                      [cellKey]: e.target.value,
+                                    }))
+                                  }
+                                  style={{
+                                    width: "100%",
+                                    background: "transparent",
+                                    color: "white",
+                                    border: "none",
+                                  }}
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        flex: "1",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontSize: "2rem",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
+      {/* 콜러 페이지 사용 방법 가이드 박스 */}
+      <div
+        style={{
+          width: "90%",
+          maxWidth: "1000px",
+          background: "#333",
+          margin: "10px",
+          padding: "15px",
+          borderRadius: "8px",
+          border: "1px solid #555",
+          color: "#ddd",
+          fontSize: "0.9rem",
+        }}
+      >
+        <p
+          style={{ fontWeight: "bold", color: "#ffcc00", margin: "0 0 10px 0" }}
+        >
+          [콜러 페이지 사용 방법]
+        </p>
+        <p>
+          <strong>시트지 생성 방법:</strong> 시트지 생성하기 버튼 클릭 후 이름,
+          인원수를 입력합니다. 다음 버튼을 눌러 무기/방어구 선택 및 코멘트를
+          입력하세요. '저장' 버튼을 클릭하면 내 시트지 목록에 저장됩니다.
+        </p>
+        <p>
+          <strong>시트지 수정, 삭제, 업로드:</strong> 내 시트지 목록에서
+          시트지를 클릭하여 수정 후 위쪽 '저장' 버튼을 클릭하세요. 삭제는 '삭제'
+          버튼, 멤버들에게 공유하려면 '업로드' 버튼을 클릭합니다. 이전 버튼으로
+          목록으로 돌아갈 수 있습니다.
+        </p>
+        <p>
+          <strong>업로드 버튼:</strong> 날짜, 집합시간, 무기티어, 방어구티어,
+          푸드티어를 입력하고 업로드하려는 시트지를 선택한 후 업로드하기 버튼을
+          클릭합니다.
+        </p>
+      </div>
+
+      <h2 style={{ margin: "10px" }}>환영합니다, {user?.name}님!</h2>
+
+      <button className="btn" onClick={() => setShowCreateModal(true)}>
+        시트지 생성하기
+      </button>
+
+      <div style={{ textAlign: "center" }}>
+        <h3 style={{ margin: "10px" }}>내 시트지 목록</h3>
+        {mySheets.length > 0 ? (
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            {mySheets.map((sheet) => (
+              <div key={sheet.id} style={{ display: "flex", gap: "5px" }}>
+                <button className="btn" onClick={() => loadSheet(sheet)}>
+                  {sheet.sheetName}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>작성한 시트지가 없습니다.</p>
+        )}
+        {showUploadModal && (
+          <div className="modal-overlay">
+            <div className="login-modal">
+              <form onSubmit={handleUpload} className="login-form">
+                <h4>시트지 데이터 업로드</h4>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginBottom: "15px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    fontSize: "15px",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <input
+                      name="year"
+                      type="number"
+                      defaultValue={new Date().getFullYear()}
+                      required
+                      style={{ width: "70px" }}
+                    />
+                    년
+                  </span>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <input
+                      name="month"
+                      type="number"
+                      defaultValue={new Date().getMonth() + 1}
+                      required
+                      style={{ width: "50px" }}
+                    />
+                    월
+                  </span>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <input
+                      name="day"
+                      type="number"
+                      defaultValue={new Date().getDate()}
+                      required
+                      style={{ width: "50px" }}
+                    />
+                    일
+                  </span>
+                </div>
+                <input
+                  name="time"
+                  type="text"
+                  placeholder="집합 시간(UTC) 시간만 입력"
+                  required
+                />
+                <input
+                  name="weaponTier"
+                  type="text"
+                  placeholder="무기 티어"
+                  required
+                />
+                <input
+                  name="armorTier"
+                  type="text"
+                  placeholder="방어구 티어"
+                  required
+                />
+                <input
+                  name="foodTier"
+                  type="text"
+                  placeholder="푸드 티어(8.2, 7.2)"
+                  required
+                />
+
+                <div style={{ margin: "10px 0" }}>
+                  <p>대상 시트지 선택:</p>
+                  <div
+                    style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}
+                  >
+                    {mySheets.map((sheet) => (
+                      <button
+                        key={sheet.id}
+                        type="button" // 폼 제출 방지
+                        onClick={() => setSelectedSheetForUpload(sheet)}
+                        style={{
+                          background:
+                            selectedSheetForUpload?.id === sheet.id
+                              ? "#007bff"
+                              : "#555",
+                          color: "white",
+                        }}
+                      >
+                        {sheet.sheetName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button type="submit">업로드하기</button>
+                <button type="button" onClick={() => setShowUploadModal(false)}>
+                  취소
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Caller;
