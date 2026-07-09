@@ -191,7 +191,7 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     sessionStorage.removeItem('user');
-    window.location.href = "/";
+    window.location.href = "/Noctis/#/";
   };
 
   const handleSignup = async () => {
