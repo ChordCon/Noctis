@@ -261,35 +261,53 @@ export default function App() {
             >
               &times;
             </button>
-            <h2>{modalType === 'login' ? '로그인' : '회원가입'}</h2>
+            <h2 style={{ margin: "0" }}>{modalType === 'login' ? '로그인' : '회원가입'}</h2>
 
             {modalType === 'signup' ? (
               // 회원가입 폼
-              <>
-                <input type="text" placeholder="인게임 닉네임" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
-                <input type="text" placeholder="영문 길드명" value={signupGuild} onChange={(e) => setSignupGuild(e.target.value)} /> {/* 추가된 필드 */}
-                <input type="password" placeholder="비밀번호" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} />
-                <input type="password" placeholder="비밀번호 확인" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} />
-                <p>길드 변경시 관리자에게 디엠주세요.</p>
-                <button className='btn' onClick={handleSignup}>회원가입</button>
-              </>
+              <form style={{
+                width: "100%"
+              }}>
+                <div style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexDirection: "column",
+                  alignItems: "center"
+                }}>
+                  <input type="text" placeholder="인게임 닉네임" value={signupName} onChange={(e) => setSignupName(e.target.value)} />
+                  <input type="text" placeholder="영문 길드명" value={signupGuild} onChange={(e) => setSignupGuild(e.target.value)} /> {/* 추가된 필드 */}
+                  <input type="password" placeholder="비밀번호" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} />
+                  <input type="password" placeholder="비밀번호 확인" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} />
+                  <p>길드 변경시 관리자에게 디엠주세요.</p>
+                  <button style={{ width: "60%" }} className='btn' onClick={handleSignup}>회원가입</button>
+                </div>
+              </form>
             ) : (
               // 로그인 폼
-              <>
-                <input
-                  type="text"
-                  placeholder="아이디"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="비밀번호"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
-                <button className='btn' onClick={handleLogin}>로그인</button>
-              </>
+              <form style={{
+                width: "100%"
+              }}>
+                <div style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexDirection: "column",
+                  alignItems: "center"
+                }}>
+                  <input
+                    type="text"
+                    placeholder="아이디"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                  />
+                  <input
+                    type="password"
+                    placeholder="비밀번호"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                  <button style={{ width: "60%" }} className='btn' onClick={handleLogin}>로그인</button>
+                </div>
+              </form>
             )}
           </div>
         </div>

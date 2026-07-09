@@ -80,8 +80,8 @@ body {
 }
 
 .logo-box {
-  width: 300px;
-  height: 300px;
+  width: 500px;
+  height: 500px;
   background: #ddd;
   display: flex;
   justify-content: center;
