@@ -289,12 +289,12 @@ const Sheet = ({ user, checkAndLogout }) => {
         <div
           style={{
             width: "90%",
-            maxWidth: "600px",
+            maxWidth: "800px",
             padding: "15px",
             background: "#333",
             borderRadius: "8px",
             border: "1px solid #555",
-            fontSize: "14px",
+            fontSize: "20px",
             textAlign: "left",
             color: "#ddd",
           }}

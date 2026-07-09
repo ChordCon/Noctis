@@ -397,7 +397,7 @@ const Caller = ({ user, checkAndLogout }) => {
             }}
           >
             <button
-              className="add-btn"
+              className="btn"
               onClick={() => {
                 setSheetConfig(null);
                 setSheetData({}); // 필요 시 데이터 초기화
@@ -405,15 +405,8 @@ const Caller = ({ user, checkAndLogout }) => {
             >
               이 전
             </button>
-            <button className="add-btn" onClick={saveSheet}>
+            <button className="btn" onClick={saveSheet}>
               저 장
-            </button>
-            <button
-              className="add-btn"
-              onClick={deleteSheet}
-              style={{ background: "#dc3545" }} // 빨간색 계열로 구분
-            >
-              삭 제
             </button>
             <button
               onClick={() => {
@@ -426,9 +419,16 @@ const Caller = ({ user, checkAndLogout }) => {
                 });
                 setShowUploadModal(true);
               }}
-              className="add-btn"
+              className="btn"
             >
               업로드
+            </button>
+            <button
+              className="add-btn"
+              onClick={deleteSheet}
+              style={{ background: "#dc3545" }} // 빨간색 계열로 구분
+            >
+              삭 제
             </button>
           </div>
           <h2>{name}</h2>
@@ -635,7 +635,7 @@ const Caller = ({ user, checkAndLogout }) => {
         alignItems: "center",
         fontSize: "2rem",
         flexDirection: "column",
-        gap: "20px",
+        gap: "10px",
       }}
     >
       {/* 콜러 페이지 사용 방법 가이드 박스 */}
@@ -649,7 +649,7 @@ const Caller = ({ user, checkAndLogout }) => {
           borderRadius: "8px",
           border: "1px solid #555",
           color: "#ddd",
-          fontSize: "0.9rem",
+          fontSize: "20px",
         }}
       >
         <p
@@ -675,13 +675,13 @@ const Caller = ({ user, checkAndLogout }) => {
         </p>
       </div>
 
-      <h2 style={{ margin: "10px" }}>환영합니다, {user?.name}님!</h2>
+      <h2 style={{ margin: "0" }}>환영합니다, {user?.name}님!</h2>
 
       <button className="btn" onClick={() => setShowCreateModal(true)}>
         시트지 생성하기
       </button>
 
-      <div style={{ textAlign: "center" }}>
+      <div style={{ marginBottom: "20px", textAlign: "center" }}>
         <h3 style={{ margin: "10px" }}>내 시트지 목록</h3>
         {mySheets.length > 0 ? (
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
