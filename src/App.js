@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { db } from "./firebase/firebase"; // 파이어베이스 설정 파일
 import { doc, getDoc, getDocs, collection, addDoc, query, where } from "firebase/firestore";
+import bcrypt from 'bcryptjs';
 import './App.css';
 import Admin from './Admin';
 import Caller from './Caller';
@@ -127,7 +128,9 @@ export default function App() {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
 
-      if (userData.password === loginPassword) {
+      const isMatch = await bcrypt.compare(loginPassword, userData.password);
+
+      if (isMatch) {
         const userSession = {
           uid: userDoc.id,
           name: userData.name,
@@ -205,12 +208,13 @@ export default function App() {
       alert("비밀번호가 일치하지 않습니다.");
       return;
     }
-
     try {
+      const hashedPassword = await bcrypt.hash(signupPassword, 10);
+
       await addDoc(collection(db, "preMembers"), {
         name: signupName,
         guild: signupGuild, // 길드명 저장
-        password: signupPassword,
+        password: hashedPassword,
         createdAt: new Date(),
       });
       alert("가입 요청이 완료되었습니다.");
