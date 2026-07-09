@@ -460,7 +460,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                 padding: "10px",
                 background: "#444",
                 borderRadius: "5px",
-                fontSize: "13px",
+                fontSize: "20px",
                 color: "#fff",
                 borderLeft: "4px solid #ffcc00", // 강조를 위한 왼쪽 테두리
               }}
