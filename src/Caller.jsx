@@ -272,7 +272,7 @@ const Caller = ({ user, checkAndLogout }) => {
         time: formData.get("time"),
         weaponTier: formData.get("weaponTier"),
         armorTier: formData.get("armorTier"),
-        foodTier: formData.get("foodTier"),
+        sheetComment: formData.get("sheetComment"),
         createdAt: new Date(),
       });
       alert("업로드되었습니다!");
@@ -312,12 +312,14 @@ const Caller = ({ user, checkAndLogout }) => {
     e.preventDefault();
     const name = e.target.sheetName.value;
     const rows = parseInt(e.target.rowCount.value);
+    const description = e.target.description.value;
 
     try {
       const docRef = await addDoc(collection(db, "sheets"), {
         callerName: user.name,
         sheetName: name,
         rowCount: rows,
+        description: description,
         data: {}, // DB에는 빈 데이터 저장
         createdAt: new Date(),
       });
@@ -355,7 +357,13 @@ const Caller = ({ user, checkAndLogout }) => {
             </button>
             <h2>시트지 생성</h2>
             <input name="sheetName" placeholder="시트지 이름" required />
-            <input name="rowCount" type="number" placeholder="행 수" required />
+            <input
+              name="rowCount"
+              type="number"
+              placeholder="행 수(인원)"
+              required
+            />
+            <input name="description" placeholder="시트지 코멘트(설명)" />
             <button type="submit">다음</button>
           </form>
         </div>
@@ -780,9 +788,9 @@ const Caller = ({ user, checkAndLogout }) => {
                   required
                 />
                 <input
-                  name="foodTier"
+                  name="sheetComment"
                   type="text"
-                  placeholder="푸드 티어(8.2, 7.2)"
+                  placeholder="시트지 코멘트"
                   required
                 />
 

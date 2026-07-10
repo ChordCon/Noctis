@@ -333,14 +333,12 @@ const Sheet = ({ user, checkAndLogout }) => {
         >
           <thead>
             <tr style={{ fontSize: "20px", background: "#333" }}>
-              <th style={{ padding: "5px" }}>날짜</th>
-              <th style={{ padding: "5px" }}>시트지 이름</th>
-              <th style={{ padding: "5px" }}>집합 시간</th>
-              <th style={{ padding: "5px" }}>무기 티어</th>
-              <th style={{ padding: "5px" }}>방어구 티어</th>
-              <th style={{ padding: "5px" }}>푸드 티어</th>
-              <th style={{ padding: "5px" }}>작성자</th>
-              <th style={{ padding: "5px" }}>관리</th>
+              <th style={{ padding: "5px", width: "20px" }}>날짜</th>
+              <th style={{ padding: "5px", width: "70px" }}>시트지 이름</th>
+              <th style={{ padding: "5px", width: "30px" }}>집합 시간</th>
+              <th style={{ padding: "5px", width: "200px" }}>코멘트</th>
+              <th style={{ padding: "5px", width: "70px" }}>작성자</th>
+              <th style={{ padding: "5px", width: "20px" }}>관리</th>
             </tr>
           </thead>
           <tbody>
@@ -373,14 +371,18 @@ const Sheet = ({ user, checkAndLogout }) => {
                     </div>
                   )}
                 </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.weaponTier}
-                </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.armorTier}
-                </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.foodTier}
+                <td
+                  style={{
+                    fontSize: "14px",
+                    padding: "5px",
+                    textAlign: "left",
+                  }}
+                >
+                  {r.sheetComment
+                    ? r.sheetComment.length > 50
+                      ? `${r.sheetComment.substring(0, 50)}...`
+                      : r.sheetComment
+                    : "-"}
                 </td>
                 <td style={{ fontSize: "15px", padding: "5px" }}>
                   {r.callerName}
@@ -434,6 +436,7 @@ const Sheet = ({ user, checkAndLogout }) => {
               maxHeight: "90vh",
               overflowY: "auto",
               background: "#222",
+              padding: "20px", // 패딩 추가 권장
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -531,8 +534,7 @@ const Sheet = ({ user, checkAndLogout }) => {
               </p>
               <p>
                 무기: {selectedRecord.weaponTier || "-"} | 방어구:{" "}
-                {selectedRecord.armorTier || "-"} | 푸드:{" "}
-                {selectedRecord.foodTier || "-"}
+                {selectedRecord.armorTier || "-"}
               </p>
               {/* 파티별 인원 카운트 표시 */}
               <div style={{ display: "flex", gap: "15px", fontWeight: "bold" }}>
@@ -576,7 +578,24 @@ const Sheet = ({ user, checkAndLogout }) => {
                 })()}
               </div>
             </div>
-
+            {/* 추가: 코멘트 표시부 */}
+            <div
+              style={{
+                marginBottom: "15px",
+                padding: "10px",
+                background: "#2a2a2a",
+                border: "1px solid #444",
+                borderRadius: "5px",
+                color: "#eee",
+                fontSize: "14px",
+                textAlign: "left",
+              }}
+            >
+              <strong style={{ color: "red" }}>[코멘트]</strong>
+              <div style={{ marginTop: "5px", whiteSpace: "pre-wrap" }}>
+                {selectedRecord.sheetComment || "등록된 코멘트가 없습니다."}
+              </div>
+            </div>
             {showCommentModal && (
               <div
                 className="modal-overlay"
@@ -614,7 +633,7 @@ const Sheet = ({ user, checkAndLogout }) => {
             )}
 
             {selectedRecord.sheetContent && (
-              <div style={{ overflowX: "auto", width: "100%" }}>
+              <div style={{ width: "100%" }}>
                 {(() => {
                   const keys = Object.keys(selectedRecord.sheetContent || {});
                   const pIdxs = [
@@ -647,7 +666,6 @@ const Sheet = ({ user, checkAndLogout }) => {
                               textAlign: "left",
                               margin: "0",
                               padding: "10px",
-                              border: "2px solid #fff",
                             }}
                           >
                             {pIdx + 1} 파티

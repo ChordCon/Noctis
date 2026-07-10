@@ -241,7 +241,7 @@ const Admin = ({ user, checkAndLogout }) => {
               </>
             ) : showModal === "addCaller" ? (
               <>
-                <h2>콜러 임명</h2>
+                <h4 style={{ margin: "10px" }}>콜러 임명</h4>
                 <input
                   type="text"
                   placeholder="사용자 닉네임"
@@ -254,7 +254,7 @@ const Admin = ({ user, checkAndLogout }) => {
               </>
             ) : (
               <>
-                <h2>관리자 임명</h2>
+                <h4 style={{ margin: "10px" }}>관리자 임명</h4>
                 <input
                   type="text"
                   placeholder="사용자 닉네임"

@@ -241,7 +241,7 @@ export default function App() {
       </Routes>
 
       {modalType && (
-        <div className="modal-overlay" onClick={() => setModalType(null)}>
+        <div className="modal-overlay">
           <div className="login-modal" onClick={(e) => e.stopPropagation()}>
             {/* [변경] 우상단 X 버튼 */}
             <button
