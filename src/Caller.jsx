@@ -153,6 +153,23 @@ const Caller = ({ user, checkAndLogout }) => {
     fetchMySheets();
   }, [user]);
 
+  // 시트 목록을 새로 가져오는 함수
+  const fetchMySheets = async () => {
+    if (!user?.name) return;
+    try {
+      const sheetsRef = collection(db, "sheets");
+      const q = query(sheetsRef, where("callerName", "==", user.name));
+      const querySnapshot = await getDocs(q);
+      const list = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMySheets(list);
+    } catch (e) {
+      console.error("시트 목록 로드 실패:", e);
+    }
+  };
+
   // 시트 선택 클릭 핸들러 (이 부분을 수정하세요)
   const loadSheet = (sheet) => {
     setSheetConfig({
@@ -364,7 +381,9 @@ const Caller = ({ user, checkAndLogout }) => {
               required
             />
             <input name="description" placeholder="시트지 코멘트(설명)" />
-            <button type="submit">다음</button>
+            <button className="callerBtn" type="submit">
+              다음
+            </button>
           </form>
         </div>
       </div>
@@ -405,15 +424,16 @@ const Caller = ({ user, checkAndLogout }) => {
             }}
           >
             <button
-              className="btn"
+              className="callerBtn"
               onClick={() => {
+                fetchMySheets();
                 setSheetConfig(null);
                 setSheetData({}); // 필요 시 데이터 초기화
               }}
             >
               이 전
             </button>
-            <button className="btn" onClick={saveSheet}>
+            <button className="callerBtn" onClick={saveSheet}>
               저 장
             </button>
             <button
@@ -427,15 +447,11 @@ const Caller = ({ user, checkAndLogout }) => {
                 });
                 setShowUploadModal(true);
               }}
-              className="btn"
+              className="callerBtn"
             >
               업로드
             </button>
-            <button
-              className="add-btn"
-              onClick={deleteSheet}
-              style={{ background: "#dc3545" }} // 빨간색 계열로 구분
-            >
+            <button className="redBtn" onClick={deleteSheet}>
               삭 제
             </button>
           </div>
@@ -685,7 +701,7 @@ const Caller = ({ user, checkAndLogout }) => {
 
       <h2 style={{ margin: "0" }}>환영합니다, {user?.name}님!</h2>
 
-      <button className="btn" onClick={() => setShowCreateModal(true)}>
+      <button className="callerBtn" onClick={() => setShowCreateModal(true)}>
         시트지 생성하기
       </button>
 
@@ -695,7 +711,7 @@ const Caller = ({ user, checkAndLogout }) => {
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
             {mySheets.map((sheet) => (
               <div key={sheet.id} style={{ display: "flex", gap: "5px" }}>
-                <button className="btn" onClick={() => loadSheet(sheet)}>
+                <button className="callerBtn" onClick={() => loadSheet(sheet)}>
                   {sheet.sheetName}
                 </button>
               </div>

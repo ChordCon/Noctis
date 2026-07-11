@@ -1,6 +1,7 @@
-.adminBtn {
+.sheetBtn {
     padding: 10px;
     cursor: pointer;
+
     /* 톤앤매너 유지 */
     background: transparent;
     color: white;
@@ -11,12 +12,13 @@
     /* 고급스러운 폰트 느낌 */
     font-size: 16px;
     font-weight: 500;
+
     /* 부드러운 전환 효과 */
     transition: all 0.3s ease;
     line-height: 0.5;
 }
 
-.adminBtn:hover {
+.sheetBtn:hover {
     color: #ffe3a3;
     /* 살짝 빛이 퍼지는 효과 */
     box-shadow: 0 0 8px rgba(255, 227, 163, 0.4);
@@ -42,7 +44,6 @@
 }
 
 .redBtn:hover {
-    border: 1px solid #ff0000;
     color: #ff4d4d;
     box-shadow: 0 0 8px rgba(255, 111, 145, 0.4);
 }

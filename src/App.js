@@ -7,7 +7,9 @@ import './App.css';
 import Admin from './Admin';
 import Caller from './Caller';
 import Sheet from './Sheet';
-import logoImage from './img/녹티스로고.png';
+import HomeVisual from './HomeVisual';
+import videoFile from './img/Noctis인트로정사각형.mp4'; // 준비한 영상 경로
+import logoImage from './img/영상미리보기.jpg';      // 썸네일로 쓸 이미지
 import logoText from './img/녹티스문구.png'
 
 const Main = ({ user, navigate, checkAndLogout }) => {
@@ -17,10 +19,14 @@ const Main = ({ user, navigate, checkAndLogout }) => {
   };
   return (
     <div className="main-content">
-      <img src={logoImage} alt="길드 로고" className="logo-box" />
+      <HomeVisual
+        videoSrc={videoFile}
+        thumbSrc={logoImage}
+        className="logo-box"
+      />
       {/* 로그인했을 때만 시트지 버튼 노출 */}
       {user && (
-        <button className="sheet-btn" onClick={handleSheetClick}>
+        <button className="appBtn" onClick={handleSheetClick}>
           시트지 확인
         </button>
       )}
@@ -40,10 +46,10 @@ const Navbar = ({ user, onOpenModal, onLogout, checkAndLogout }) => {
     <header className="navbar">
       <div className="nav-left">
         {canAccessAdmin && (
-          <button onClick={() => handleNavClick('/admin', 'admin')}>관리자</button>
+          <button className='appBtn' onClick={() => handleNavClick('/admin', 'admin')}>관리자</button>
         )}
         {canAccessCaller && (
-          <button onClick={() => handleNavClick('/caller', 'caller')}>콜 러</button>
+          <button className='appBtn' onClick={() => handleNavClick('/caller', 'caller')}>콜 러</button>
         )}
       </div>
       <div className="nav-center">
@@ -58,14 +64,14 @@ const Navbar = ({ user, onOpenModal, onLogout, checkAndLogout }) => {
         {user ? (
           <>
             <span>{user.name}님 환영합니다</span>
-            <button onClick={() => navigate('/')}>홈으로</button>
-            <button onClick={onLogout}>로그아웃</button>
+            <button className='appBtn' onClick={() => navigate('/')}>홈으로</button>
+            <button className='appBtn' onClick={onLogout}>로그아웃</button>
           </>
         ) : (
           <>
-            <button onClick={() => navigate('/')}>홈으로</button>
-            <button onClick={() => onOpenModal('login')}>로그인</button>
-            <button onClick={() => onOpenModal('signup')}>회원가입</button>
+            <button className='appBtn' onClick={() => navigate('/')}>홈으로</button>
+            <button className='appBtn' onClick={() => onOpenModal('login')}>로그인</button>
+            <button className='appBtn' onClick={() => onOpenModal('signup')}>회원가입</button>
           </>
         )}
       </div>
@@ -110,7 +116,8 @@ export default function App() {
     checkSessionSecurity();
   }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault(); // 폼 제출 이벤트 차단
     if (!loginId || !loginPassword) {
       alert("아이디와 비밀번호를 입력해주세요.");
       return;
@@ -267,7 +274,7 @@ export default function App() {
               // 회원가입 폼
               <form style={{
                 width: "100%"
-              }}>
+              }} onSubmit={(e) => { e.preventDefault(); handleSignup(); }}>
                 <div style={{
                   display: "flex",
                   gap: "10px",
@@ -278,15 +285,15 @@ export default function App() {
                   <input type="text" placeholder="영문 길드명" value={signupGuild} onChange={(e) => setSignupGuild(e.target.value)} /> {/* 추가된 필드 */}
                   <input type="password" placeholder="비밀번호" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} />
                   <input type="password" placeholder="비밀번호 확인" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} />
-                  <p>길드 변경시 관리자에게 디엠주세요.</p>
-                  <button style={{ width: "60%" }} className='btn' onClick={handleSignup}>회원가입</button>
+                  <p>회원가입 후 관리자, 오피서에게 디엠주세요</p>
+                  <button className='appBtn' style={{ width: "60%" }} type="submit">회원가입</button>
                 </div>
               </form>
             ) : (
               // 로그인 폼
               <form style={{
                 width: "100%"
-              }}>
+              }} onSubmit={handleLogin}>
                 <div style={{
                   display: "flex",
                   gap: "10px",
@@ -305,7 +312,8 @@ export default function App() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                   />
-                  <button style={{ width: "60%" }} className='btn' onClick={handleLogin}>로그인</button>
+                  <p>길드 변경시 관리자, 오피서에게 디엠주세요</p>
+                  <button className='appBtn' style={{ width: "60%" }} type="submit">로그인</button>
                 </div>
               </form>
             )}

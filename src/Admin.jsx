@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import "./Admin.css";
 import { db } from "./firebase/firebase";
 import {
   collection,
@@ -16,6 +17,7 @@ import {
 const Admin = ({ user, checkAndLogout }) => {
   const navigate = useNavigate();
   const [preMembers, setPreMembers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [showModal, setShowModal] = useState(null); // 'members' 또는 'addCaller'
   const [callerName, setCallerName] = useState("");
 
@@ -37,6 +39,11 @@ const Admin = ({ user, checkAndLogout }) => {
     setPreMembers(
       querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
     );
+  };
+
+  const fetchUsers = async () => {
+    const snap = await getDocs(collection(db, "users"));
+    setAllUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
   const handleAddAdmin = async () => {
@@ -121,6 +128,40 @@ const Admin = ({ user, checkAndLogout }) => {
     }
   };
 
+  // 거부 로직 추가
+  const rejectMember = async (id, name) => {
+    if (!window.confirm(`${name}님의 가입 요청을 거부하시겠습니까?`)) return;
+    try {
+      await deleteDoc(doc(db, "preMembers", id));
+      alert("거부되었습니다.");
+      fetchPreMembers(); // 목록 새로고침
+    } catch (e) {
+      alert("거부 중 오류 발생");
+    }
+  };
+
+  const handleDemoteCaller = async (uid, name) => {
+    if (!window.confirm(`${name}님을 멤버로 강등시키겠습니까?`)) return;
+    try {
+      await updateDoc(doc(db, "users", uid), { role: "member" });
+      alert("멤버로 강등되었습니다.");
+      fetchUsers(); // 목록 새로고침
+    } catch (e) {
+      alert("강등 실패");
+    }
+  };
+
+  const handleKickUser = async (uid, name) => {
+    if (!window.confirm(`${name}님을 탈퇴시키겠습니까?`)) return;
+    try {
+      await deleteDoc(doc(db, "users", uid));
+      alert("삭제되었습니다.");
+      fetchUsers(); // 목록 새로고침
+    } catch (e) {
+      alert("삭제 실패");
+    }
+  };
+
   return (
     <div
       style={{
@@ -172,7 +213,7 @@ const Admin = ({ user, checkAndLogout }) => {
 
       <div style={{ display: "flex", gap: "10px" }}>
         <button
-          className="btn"
+          className="adminBtn"
           onClick={() => {
             fetchPreMembers();
             setShowModal("members");
@@ -180,11 +221,20 @@ const Admin = ({ user, checkAndLogout }) => {
         >
           가입 요청 확인
         </button>
-        <button className="btn" onClick={() => setShowModal("addCaller")}>
+        <button className="adminBtn" onClick={() => setShowModal("addCaller")}>
           콜러 추가
         </button>
-        <button className="btn" onClick={() => setShowModal("addAdmin")}>
+        <button className="adminBtn" onClick={() => setShowModal("addAdmin")}>
           관리자 추가
+        </button>
+        <button
+          className="adminBtn"
+          onClick={() => {
+            fetchUsers();
+            setShowModal("manageUsers");
+          }}
+        >
+          유저 관리
         </button>
       </div>
 
@@ -226,15 +276,28 @@ const Admin = ({ user, checkAndLogout }) => {
                       margin: "10px 0",
                       padding: "5px",
                       borderBottom: "1px solid #444",
+                      maxHeight: "60vh", // 모달 안에서 최대 높이 설정
+                      overflowY: "auto", // 내용이 넘치면 세로 스크롤 생성
+                      paddingRight: "10px", // 스크롤바와의 간격
                     }}
                   >
                     {/* 닉네임과 길드명 표시 */}
-                    <span style={{ fontSize: "1.2rem", margin: "0 15px" }}>
+                    <span style={{ fontSize: "16px", margin: "0 15px" }}>
                       <strong>{m.name}</strong> |{" "}
                       <span style={{ color: "#00d4ff" }}>{m.guild}</span>
                     </span>
-                    <button onClick={() => approveMember(m)} className="btn">
+                    <button
+                      onClick={() => approveMember(m)}
+                      className="adminBtn"
+                      style={{ marginRight: "10px" }}
+                    >
                       승인
+                    </button>
+                    <button
+                      onClick={() => rejectMember(m.id, m.name)}
+                      className="redBtn"
+                    >
+                      거부
                     </button>
                   </div>
                 ))}
@@ -248,11 +311,11 @@ const Admin = ({ user, checkAndLogout }) => {
                   value={callerName}
                   onChange={(e) => setCallerName(e.target.value)}
                 />
-                <button className="btn" onClick={handleAddCaller}>
+                <button className="adminBtn" onClick={handleAddCaller}>
                   임명하기
                 </button>
               </>
-            ) : (
+            ) : showModal === "addAdmin" ? (
               <>
                 <h4 style={{ margin: "10px" }}>관리자 임명</h4>
                 <input
@@ -261,11 +324,70 @@ const Admin = ({ user, checkAndLogout }) => {
                   value={callerName}
                   onChange={(e) => setCallerName(e.target.value)}
                 />
-                <button className="btn" onClick={handleAddAdmin}>
+                <button className="adminBtn" onClick={handleAddAdmin}>
                   임명하기
                 </button>
               </>
-            )}
+            ) : showModal === "manageUsers" ? (
+              // [추가된 부분] 유저 관리 화면
+              <>
+                <h4 style={{ margin: "10px" }}>유저 관리</h4>
+                <div
+                  style={{
+                    maxHeight: "60vh",
+                    overflowY: "auto",
+                    width: "100%",
+                    paddingRight: "5px",
+                  }}
+                >
+                  {allUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      style={{
+                        height: "50px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        margin: "10px 0",
+                        borderBottom: "1px solid #444",
+                      }}
+                    >
+                      <p
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          fontSize: "16px",
+                          margin: "0",
+                        }}
+                      >
+                        {u.name} ({u.role})
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {u.role === "caller" && (
+                          <button
+                            onClick={() => handleDemoteCaller(u.id, u.name)}
+                            className="redBtn"
+                            style={{ margin: "0 5px" }}
+                          >
+                            강등
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleKickUser(u.id, u.name)}
+                          className="redBtn"
+                        >
+                          탈퇴
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       )}

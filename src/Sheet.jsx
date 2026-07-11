@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import "./Sheet.css";
 import { db } from "./firebase/firebase";
 import {
   collection,
@@ -222,14 +223,6 @@ const Sheet = ({ user, checkAndLogout }) => {
     }
   };
 
-  const BUTTON_STYLE = {
-    padding: "8px 16px", // [세로 여백, 가로 여백]으로 크기 조절
-    fontSize: "14px", // 글자 크기
-    borderRadius: "4px", // 모서리 둥글게 (선택)
-    border: "none", // 테두리 제거 (선택)
-    cursor: "pointer",
-  };
-
   // 모달 닫기 공통 함수
   const handleCloseModal = async () => {
     await fetchRecords(); // 닫을 때 최신 상태 불러오기
@@ -407,14 +400,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                         onClick={(e) =>
                           handleDeleteRecord(e, r.id, r.callerName)
                         }
-                        style={{
-                          background: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          cursor: "pointer",
-                        }}
+                        className="redBtn"
                       >
                         삭제
                       </button>
@@ -605,7 +591,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                   className="login-modal"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h2>무기 정보 확인</h2>
+                  <h4 style={{ margin: "10px" }}>무기 정보</h4>
                   <div
                     style={
                       {
@@ -613,8 +599,9 @@ const Sheet = ({ user, checkAndLogout }) => {
                       }
                     }
                   >
-                    <strong>코멘트:</strong>
-                    <p>{comment}</p>
+                    <p style={{ margin: "10px 0", fontSize: "16px" }}>
+                      {comment}
+                    </p>
                   </div>
                   <div
                     style={{
@@ -623,8 +610,13 @@ const Sheet = ({ user, checkAndLogout }) => {
                       justifyContent: "center",
                     }}
                   >
-                    <button onClick={handleFinalConfirm}>확인</button>
-                    <button onClick={() => setShowCommentModal(null)}>
+                    <button className="sheetBtn" onClick={handleFinalConfirm}>
+                      확인
+                    </button>
+                    <button
+                      className="redBtn"
+                      onClick={() => setShowCommentModal(null)}
+                    >
                       닫기
                     </button>
                   </div>
@@ -745,10 +737,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                                         onClick={() =>
                                           handleInitiateConfirm(pIdx, r)
                                         }
-                                        style={{
-                                          ...BUTTON_STYLE,
-                                          background: "#007bff",
-                                        }}
+                                        className="sheetBtn"
                                       >
                                         확인
                                       </button>
@@ -756,10 +745,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                                     {canDelete && (
                                       <button
                                         onClick={() => handleUnlock(pIdx, r)}
-                                        style={{
-                                          ...BUTTON_STYLE,
-                                          background: "#dc3545",
-                                        }}
+                                        className="redBtn"
                                       >
                                         삭제
                                       </button>

@@ -1,26 +1,49 @@
-.btn {
-    padding: 8px 20px;
+.callerBtn {
+    padding: 10px;
     cursor: pointer;
 
     /* 톤앤매너 유지 */
-    background: transparent;
-    color: #ffe3a3;
-    border: 1px solid #ffe3a3;
+    background: transparent !important;
+    color: white !important;
+    border: 1px solid #ffe3a3 !important;
     border-radius: 6px;
     /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
 
     /* 고급스러운 폰트 느낌 */
-    font-size: 0.9rem;
-    letter-spacing: 0.03em;
+    font-size: 16px;
     font-weight: 500;
 
     /* 부드러운 전환 효과 */
     transition: all 0.3s ease;
+    line-height: 0.5;
 }
 
-.btn:hover {
-    background: #ffe3a3;
-    color: black;
+.callerBtn:hover {
+    color: #ffe3a3 !important;
     /* 살짝 빛이 퍼지는 효과 */
     box-shadow: 0 0 8px rgba(255, 227, 163, 0.4);
+}
+
+.redBtn {
+    padding: 10px;
+    cursor: pointer;
+    /* 톤앤매너 유지 */
+    background: transparent;
+    color: white;
+    border: 1px solid #ff4d4d;
+    border-radius: 6px;
+    /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
+
+    /* 고급스러운 폰트 느낌 */
+    font-size: 16px;
+    font-weight: 500;
+
+    /* 부드러운 전환 효과 */
+    transition: all 0.3s ease;
+    line-height: 0.5;
+}
+
+.redBtn:hover {
+    color: #ff4d4d;
+    box-shadow: 0 0 8px rgba(255, 111, 145, 0.4);
 }
