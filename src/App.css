@@ -16,14 +16,14 @@ body {
 }
 
 .appBtn {
-  padding: 10px;
+  padding: 15px;
   /* !important 추가 */
   cursor: pointer;
   background: transparent !important;
   color: white !important;
   border: 1px solid #ffe3a3 !important;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   transition: all 0.3s ease;
   line-height: 0.5;
@@ -46,8 +46,8 @@ body {
 }
 
 .logo-box {
-  width: 250px;
-  height: 250px;
+  width: 400px;
+  height: 400px;
   display: flex;
   justify-content: center;
   align-items: center;

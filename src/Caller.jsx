@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Caller.css";
+import SearchableSelect from "./SearchableSelect";
 import { db } from "./firebase/firebase";
 import {
   doc,
@@ -31,6 +32,8 @@ const Caller = ({ user, checkAndLogout }) => {
   const [cellImages, setCellImages] = useState({}); // { "파티-행-열": "이미지URL" }
   const [sheetData, setSheetData] = useState({}); // { "pIdx-r-c": value }
   const [mySheets, setMySheets] = useState([]);
+  const [presets, setPresets] = useState([]); // 프리셋 상태 추가
+  const [combinedWeaponList, setCombinedWeaponList] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedSheetForUpload, setSelectedSheetForUpload] = useState(null);
   const navigate = useNavigate();
@@ -69,6 +72,7 @@ const Caller = ({ user, checkAndLogout }) => {
     "230px",
     "150px", // Potion (2칸)
     "150px",
+    "100px", //프리셋 저장
   ];
 
   const colCategoryMap = {
@@ -120,6 +124,37 @@ const Caller = ({ user, checkAndLogout }) => {
     };
     fetchAllItems();
   }, []);
+
+  // 컴포넌트 마운트 시 프리셋 로드
+  useEffect(() => {
+    const fetchPresets = async () => {
+      const q = query(
+        collection(db, "presets"),
+        where("callerName", "==", user.name),
+      );
+      const querySnapshot = await getDocs(q);
+      setPresets(
+        querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      );
+    };
+    if (user?.name) fetchPresets();
+  }, [user]);
+
+  useEffect(() => {
+    if (itemLists.weapons.length > 0 || presets.length > 0) {
+      const weaponItems = itemLists.weapons.map((item) => ({
+        ...item,
+        type: "item",
+      }));
+      const presetItems = presets.map((p) => ({
+        name: p.name,
+        url: null,
+        type: "preset",
+        data: p.data,
+      }));
+      setCombinedWeaponList([...weaponItems, ...presetItems]);
+    }
+  }, [itemLists, presets]);
 
   //콜러의 시트 목록을 가져오는 함수
   useEffect(() => {
@@ -239,6 +274,37 @@ const Caller = ({ user, checkAndLogout }) => {
       alert("저장에 실패했습니다.");
     }
   };
+  // 다른 이름으로 저장 함수
+  const saveAsSheet = async () => {
+    const newName = window.prompt(
+      "새로운 시트지 이름을 입력하세요:",
+      `${sheetConfig.name}_복사본`,
+    );
+    if (!newName) return;
+
+    try {
+      const newSheetData = {
+        callerName: user.name,
+        sheetName: newName,
+        rowCount: sheetConfig.rows,
+        data: sheetData, // 현재 화면의 데이터를 그대로 복사
+        description: sheetConfig.description || "",
+        createdAt: new Date(),
+      };
+
+      const docRef = await addDoc(collection(db, "sheets"), newSheetData);
+
+      // 리스트에 추가하고 해당 시트를 불러옴
+      setMySheets((prev) => [...prev, { id: docRef.id, ...newSheetData }]);
+      setSheetConfig({ name: newName, rows: sheetConfig.rows, id: docRef.id });
+
+      alert("새로운 이름으로 저장되었습니다!");
+    } catch (e) {
+      console.error("저장 실패:", e);
+      alert("저장에 실패했습니다.");
+    }
+  };
+
   // 시트지 업로드
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -349,6 +415,44 @@ const Caller = ({ user, checkAndLogout }) => {
       console.error("생성 실패:", e);
     }
   };
+  //프리셋 저장
+  const saveEquipmentPreset = async (rowIdx, pIdx) => {
+    // 1. 세션 스토리지에서 유저 이름 가져오기
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const userName = storedUser.name || "Unknown";
+
+    // 2. 현재 행의 무기 이름 가져오기 (c=2가 무기 열이라고 가정)
+    const weaponName = sheetData[`${pIdx}-${rowIdx}-2`] || "무기없음";
+
+    // 3. 무기이름 + 유저이름 조합으로 프리셋 이름 생성
+    const presetName = `${weaponName}(${userName})`;
+
+    // 4. 해당 행의 장비 데이터 추출 (Weapon ~ Potion: 2번~15번 컬럼)
+    const equipmentData = {};
+    for (let c = 2; c <= 15; c++) {
+      const cellKey = `${pIdx}-${rowIdx}-${c}`;
+      equipmentData[cellKey] = sheetData[cellKey] || "";
+    }
+
+    try {
+      const newPreset = {
+        callerName: userName,
+        name: presetName,
+        data: equipmentData,
+        createdAt: new Date(),
+      };
+
+      // 5. Firebase 저장
+      const docRef = await addDoc(collection(db, "presets"), newPreset);
+
+      // 6. 로컬 상태 업데이트
+      setPresets([...presets, { id: docRef.id, ...newPreset }]);
+      alert(`'${presetName}'으로 저장되었습니다.`);
+    } catch (e) {
+      console.error("저장 실패:", e);
+      alert("저장에 실패했습니다.");
+    }
+  };
 
   // 2. 시트지 생성 팝업
   if (showCreateModal) {
@@ -403,6 +507,7 @@ const Caller = ({ user, checkAndLogout }) => {
       "Cape",
       "Food",
       "Potion",
+      "Preset",
     ];
     const partyData = [];
     for (let i = 0; i < rows; i += 20) {
@@ -435,6 +540,9 @@ const Caller = ({ user, checkAndLogout }) => {
             </button>
             <button className="callerBtn" onClick={saveSheet}>
               저 장
+            </button>
+            <button className="callerBtn" onClick={saveAsSheet}>
+              다른 이름으로 저장
             </button>
             <button
               onClick={() => {
@@ -503,7 +611,7 @@ const Caller = ({ user, checkAndLogout }) => {
                 <tbody>
                   {party.data.map((_, r) => (
                     <tr key={r}>
-                      {Array(18)
+                      {Array(19)
                         .fill()
                         .map((_, c) => {
                           const cellKey = `${pIdx}-${r}-${c}`;
@@ -518,7 +626,23 @@ const Caller = ({ user, checkAndLogout }) => {
                                 border: "1px solid #555",
                               }}
                             >
-                              {c === 0 ? (
+                              {c === 16 ? (
+                                // [추가] 마지막 열에 프리셋 저장 버튼 배치
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => saveEquipmentPreset(r, pIdx)}
+                                    className="callerBtn"
+                                  >
+                                    저 장
+                                  </button>
+                                </div>
+                              ) : c === 0 ? (
                                 // Roll 드롭다운
                                 <select
                                   value={sheetData[cellKey] || ""}
@@ -569,55 +693,43 @@ const Caller = ({ user, checkAndLogout }) => {
                                   placeholder="코멘트 입력"
                                 />
                               ) : list ? (
-                                // [수정] 무기 포함 모든 아이템 열의 통합 드롭다운
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "5px",
-                                  }}
-                                >
-                                  {cellImages[cellKey] && (
-                                    <img
-                                      src={cellImages[cellKey]}
-                                      style={{
-                                        width: "25px",
-                                        height: "25px",
-                                      }}
-                                      alt="item"
-                                    />
-                                  )}
-                                  <select
-                                    value={sheetData[cellKey] || ""}
-                                    onChange={(e) => {
-                                      const name = e.target.value;
-                                      const url = list.find(
-                                        (w) => w.name === name,
-                                      )?.url;
+                                // [수정] 무기 등 아이템 열에 검색 가능한 컴포넌트 적용
+                                <SearchableSelect
+                                  list={combinedWeaponList} // 위에서 만든 통합 리스트
+                                  value={sheetData[cellKey] || ""}
+                                  onChange={(selectedName, presetData) => {
+                                    if (presetData) {
+                                      // 1. 프리셋 적용 로직
+                                      setSheetData((prev) => {
+                                        const newData = { ...prev };
+                                        Object.keys(presetData).forEach(
+                                          (key) => {
+                                            // 프리셋 데이터의 키(pIdx-r-c)를 현재 행의 좌표에 맞게 매핑하거나 그대로 사용
+                                            // 여기서는 presetData에 담긴 키가 이미 정확한 좌표라면 그대로 덮어씁니다.
+                                            const [_, __, c] = key.split("-");
+                                            newData[`${pIdx}-${r}-${c}`] =
+                                              presetData[key];
+                                          },
+                                        );
+                                        return newData;
+                                      });
+                                    } else {
+                                      // 2. 일반 아이템 선택 로직
+                                      const selectedItem =
+                                        itemLists.weapons.find(
+                                          (w) => w.name === selectedName,
+                                        );
                                       setSheetData((prev) => ({
                                         ...prev,
-                                        [cellKey]: name,
+                                        [cellKey]: selectedName,
                                       }));
                                       setCellImages((prev) => ({
                                         ...prev,
-                                        [cellKey]: url,
+                                        [cellKey]: selectedItem?.url,
                                       }));
-                                    }}
-                                    style={{
-                                      flex: 1,
-                                      background: "#222",
-                                      color: "white",
-                                      border: "none",
-                                    }}
-                                  >
-                                    <option value="">선택</option>
-                                    {list.map((o) => (
-                                      <option key={o.name} value={o.name}>
-                                        {o.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                                    }
+                                  }}
+                                />
                               ) : (
                                 // 그 외 일반 입력란 (Name 등)
                                 <input

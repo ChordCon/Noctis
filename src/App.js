@@ -9,7 +9,6 @@ import Caller from './Caller';
 import Sheet from './Sheet';
 import HomeVisual from './HomeVisual';
 import videoFile from './img/Noctis인트로정사각형.mp4'; // 준비한 영상 경로
-import logoImage from './img/영상미리보기.jpg';      // 썸네일로 쓸 이미지
 import logoText from './img/녹티스문구.png'
 
 const Main = ({ user, navigate, checkAndLogout }) => {
@@ -21,13 +20,12 @@ const Main = ({ user, navigate, checkAndLogout }) => {
     <div className="main-content">
       <HomeVisual
         videoSrc={videoFile}
-        thumbSrc={logoImage}
         className="logo-box"
       />
       {/* 로그인했을 때만 시트지 버튼 노출 */}
       {user && (
         <button className="appBtn" onClick={handleSheetClick}>
-          시트지 확인
+          파이트 & 아발 우물 시트지
         </button>
       )}
     </div>

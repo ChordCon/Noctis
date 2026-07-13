@@ -449,7 +449,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                 padding: "10px",
                 background: "#444",
                 borderRadius: "5px",
-                fontSize: "20px",
+                fontSize: "18px",
                 color: "#fff",
                 borderLeft: "4px solid #ffcc00", // 강조를 위한 왼쪽 테두리
               }}
@@ -474,7 +474,6 @@ const Sheet = ({ user, checkAndLogout }) => {
             {/* 1. 상단 정보 표시부 */}
             <div
               style={{
-                marginBottom: "10px",
                 padding: "10px",
                 background: "#333",
                 borderRadius: "5px",
@@ -482,7 +481,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                 flexWrap: "wrap", // 화면이 작아지면 줄바꿈
                 gap: "10px", // 항목 간의 간격
                 alignItems: "center",
-                fontSize: "15px",
+                fontSize: "20px",
               }}
             >
               <p style={{ margin: 0, color: "#ffcc00" }}>
@@ -573,14 +572,14 @@ const Sheet = ({ user, checkAndLogout }) => {
                 border: "1px solid #444",
                 borderRadius: "5px",
                 color: "#eee",
-                fontSize: "14px",
+                fontSize: "20px",
                 textAlign: "left",
               }}
             >
               <strong style={{ color: "red" }}>[코멘트]</strong>
-              <div style={{ marginTop: "5px", whiteSpace: "pre-wrap" }}>
+              <span style={{ margin: "5px", whiteSpace: "pre-wrap" }}>
                 {selectedRecord.sheetComment || "등록된 코멘트가 없습니다."}
-              </div>
+              </span>
             </div>
             {showCommentModal && (
               <div
@@ -739,7 +738,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                                         }
                                         className="sheetBtn"
                                       >
-                                        확인
+                                        참 여
                                       </button>
                                     )}
                                     {canDelete && (
@@ -747,7 +746,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                                         onClick={() => handleUnlock(pIdx, r)}
                                         className="redBtn"
                                       >
-                                        삭제
+                                        삭 제
                                       </button>
                                     )}
                                   </td>
