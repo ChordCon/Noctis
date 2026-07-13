@@ -1,16 +1,15 @@
 {
   "files": {
-    "main.css": "/Noctis/static/css/main.d2ef0adf.css",
-    "main.js": "/Noctis/static/js/main.df8668da.js",
+    "main.css": "/Noctis/static/css/main.25bfadf5.css",
+    "main.js": "/Noctis/static/js/main.f25854b9.js",
     "static/media/Noctis인트로정사각형.mp4": "/Noctis/static/media/Noctis인트로정사각형.912844d6385819c250c5.mp4",
     "static/media/녹티스문구.png": "/Noctis/static/media/녹티스문구.a6949c47e82e401b96db.png",
-    "static/media/영상미리보기.jpg": "/Noctis/static/media/영상미리보기.5d61640c46dedb32d617.jpg",
     "index.html": "/Noctis/index.html",
-    "main.d2ef0adf.css.map": "/Noctis/static/css/main.d2ef0adf.css.map",
-    "main.df8668da.js.map": "/Noctis/static/js/main.df8668da.js.map"
+    "main.25bfadf5.css.map": "/Noctis/static/css/main.25bfadf5.css.map",
+    "main.f25854b9.js.map": "/Noctis/static/js/main.f25854b9.js.map"
   },
   "entrypoints": [
-    "static/css/main.d2ef0adf.css",
-    "static/js/main.df8668da.js"
+    "static/css/main.25bfadf5.css",
+    "static/js/main.f25854b9.js"
   ]
 }
