@@ -46,3 +46,27 @@
     color: #ff4d4d;
     box-shadow: 0 0 8px rgba(255, 111, 145, 0.4);
 }
+
+.modalAdmin-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.admit-modal {
+    background: #333;
+    padding: 30px;
+    border-radius: 8px;
+    width: 600px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}

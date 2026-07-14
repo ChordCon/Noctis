@@ -85,6 +85,31 @@ body {
   z-index: 1000;
 }
 
+
+/* 로그인 팝업 */
+.admit-modal {
+  background: #1e1e1e;
+  padding: 40px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 내부 컨텐츠(h2, input, button) 가로 중앙 정렬 */
+  border: 1px solid #444;
+  position: relative;
+  width: 300px;
+  text-align: center;
+  /* 텍스트도 가운데로 */
+}
+
+/* h2를 중앙으로 */
+.admit-modal h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  width: 100%;
+}
+
 /* 로그인 폼 내부 정렬 */
 .login-form {
   display: flex;

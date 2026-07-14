@@ -240,9 +240,9 @@ const Admin = ({ user, checkAndLogout }) => {
 
       {/* 모달 팝업 */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(null)}>
+        <div className="modalAdmin-overlay" onClick={() => setShowModal(null)}>
           <div
-            className="login-modal"
+            className="admit-modal"
             style={{ position: "relative" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -329,59 +329,102 @@ const Admin = ({ user, checkAndLogout }) => {
                 </button>
               </>
             ) : showModal === "manageUsers" ? (
-              // [추가된 부분] 유저 관리 화면
               <>
-                <h4 style={{ margin: "10px" }}>유저 관리</h4>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    margin: "10px",
+                  }}
+                >
+                  <h4 style={{ margin: 0 }}>유저 관리</h4>
+                  <span style={{ fontSize: "20px", color: "#ffcc00" }}>
+                    (총 {allUsers.length}명)
+                  </span>
+                </div>
                 <div
                   style={{
                     maxHeight: "60vh",
                     overflowY: "auto",
                     width: "100%",
-                    paddingRight: "5px",
                   }}
                 >
                   {allUsers.map((u) => (
                     <div
                       key={u.id}
                       style={{
-                        height: "50px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        margin: "10px 0",
+                        padding: "15px 0", // 상하 패딩을 주어 여유 확보
                         borderBottom: "1px solid #444",
+                        display: "flex",
+                        flexDirection: "column", // 세로 방향으로 쌓기
+                        gap: "8px", // 요소 간 간격
                       }}
                     >
-                      <p
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          fontSize: "16px",
-                          margin: "0",
-                        }}
-                      >
-                        {u.name} ({u.role})
-                      </p>
+                      {/* 상단: 유저 정보 및 버튼 */}
                       <div
                         style={{
                           display: "flex",
+                          justifyContent: "space-between",
                           alignItems: "center",
                         }}
                       >
-                        {u.role === "caller" && (
-                          <button
-                            onClick={() => handleDemoteCaller(u.id, u.name)}
-                            className="redBtn"
-                            style={{ margin: "0 5px" }}
-                          >
-                            강등
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleKickUser(u.id, u.name)}
-                          className="redBtn"
+                        <p
+                          style={{
+                            margin: "0",
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                          }}
                         >
-                          탈퇴
-                        </button>
+                          {u.name} ({u.role})
+                        </p>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "5px",
+                            marginRight: "10px",
+                          }}
+                        >
+                          {u.role === "caller" && (
+                            <button
+                              onClick={() => handleDemoteCaller(u.id, u.name)}
+                              className="redBtn"
+                              style={{
+                                height: "40px",
+                                fontSize: "12px",
+                                padding: "4px 8px",
+                              }}
+                            >
+                              강 등
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleKickUser(u.id, u.name)}
+                            className="redBtn"
+                            style={{
+                              height: "40px",
+                              fontSize: "12px",
+                              padding: "4px 8px",
+                            }}
+                          >
+                            탈 퇴
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 하단: 참여 횟수 (고정 위치) */}
+                      <div style={{ fontSize: "13px", color: "#00d4ff" }}>
+                        {u.participationCount ? (
+                          Object.entries(u.participationCount).map(
+                            ([time, count]) => (
+                              <span key={time} style={{ marginRight: "10px" }}>
+                                [{time}] {count}회
+                              </span>
+                            ),
+                          )
+                        ) : (
+                          <span style={{ color: "#888" }}>참여 기록 없음</span>
+                        )}
                       </div>
                     </div>
                   ))}

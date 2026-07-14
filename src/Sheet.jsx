@@ -11,6 +11,8 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  increment,
+  setDoc,
 } from "firebase/firestore";
 
 const Sheet = ({ user, checkAndLogout }) => {
@@ -115,10 +117,7 @@ const Sheet = ({ user, checkAndLogout }) => {
 
   // 삭제(잠금 해제) 버튼: 행의 데이터를 초기화하고 잠금 해제
   const handleUnlock = async (pIdx, r) => {
-    if (
-      !window.confirm("정말 이 행의 데이터를 삭제하고 잠금을 해제하시겠습니까?")
-    )
-      return;
+    if (!window.confirm("참여 및 잠금을 해제하시겠습니까?")) return;
 
     const updatedContent = { ...selectedRecord.sheetContent };
     updatedContent[`${pIdx}-${r}-1`] = "";
@@ -127,16 +126,27 @@ const Sheet = ({ user, checkAndLogout }) => {
 
     try {
       const docRef = doc(db, "records", selectedRecord.id);
+
+      // 1. 시트 데이터 업데이트
       await updateDoc(docRef, { sheetContent: updatedContent });
+
+      // 2. 참여 횟수 -1 차감
+      const timeKey = selectedRecord.time || "unknown";
+      const userRef = doc(db, "users", user.uid);
+
+      await updateDoc(userRef, {
+        [`participationCount.${timeKey}`]: increment(-1),
+      });
+
       setSelectedRecord({ ...selectedRecord, sheetContent: updatedContent });
-      alert("삭제 및 잠금이 해제되었습니다.");
+      alert("참여 및 잠금이 해제되었습니다.");
     } catch (e) {
       console.error("삭제 실패:", e);
       alert("데이터 삭제에 실패했습니다.");
     }
   };
 
-  // 확인 버튼 클릭 시 호출
+  // 참 여 버튼 클릭 시 호출
   const handleInitiateConfirm = async (pIdx, r) => {
     // 1. 로그인 정보 확인
     if (!user?.guild || !user?.name) {
@@ -162,14 +172,14 @@ const Sheet = ({ user, checkAndLogout }) => {
     setShowCommentModal({ pIdx, r });
   };
 
-  // 2. 팝업 내에서 최종 확인 버튼 클릭 시 실행
+  // 확인 버튼 클릭 시 호출 (참여 횟수 기록 포함)
   const handleFinalConfirm = async () => {
     const { pIdx, r } = showCommentModal;
 
     try {
       const docRef = doc(db, "records", selectedRecord.id);
 
-      // 1. 현재 화면에 입력된 인풋 값을 우선적으로 가져옴 (중요!)
+      // 1. 현재 화면에 입력된 인풋 값을 우선적으로 가져옴
       const currentInputGuild = selectedRecord.sheetContent[`${pIdx}-${r}-1`];
       const currentInputName = selectedRecord.sheetContent[`${pIdx}-${r}-2`];
 
@@ -213,7 +223,18 @@ const Sheet = ({ user, checkAndLogout }) => {
         [`locked-${pIdx}-${r}`]: true,
       };
 
+      // 시트 데이터 업데이트
       await updateDoc(docRef, { sheetContent: updatedContent });
+
+      // 4. 유저별 참여 횟수 업데이트
+      // 시트지의 시간 필드 사용 (예: "16:00")
+      const timeKey = selectedRecord.time || "unknown";
+      const userRef = doc(db, "users", user.uid);
+
+      await updateDoc(userRef, {
+        [`participationCount.${timeKey}`]: increment(1),
+      });
+
       setSelectedRecord((prev) => ({ ...prev, sheetContent: updatedContent }));
       alert("저장되었습니다.");
       setShowCommentModal(null);
