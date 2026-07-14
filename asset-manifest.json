@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/Noctis/static/css/main.4682c060.css",
-    "main.js": "/Noctis/static/js/main.31173352.js",
+    "main.js": "/Noctis/static/js/main.8d4a0bc5.js",
     "static/media/Noctis인트로정사각형.mp4": "/Noctis/static/media/Noctis인트로정사각형.912844d6385819c250c5.mp4",
     "static/media/녹티스문구.png": "/Noctis/static/media/녹티스문구.a6949c47e82e401b96db.png",
     "index.html": "/Noctis/index.html",
     "main.4682c060.css.map": "/Noctis/static/css/main.4682c060.css.map",
-    "main.31173352.js.map": "/Noctis/static/js/main.31173352.js.map"
+    "main.8d4a0bc5.js.map": "/Noctis/static/js/main.8d4a0bc5.js.map"
   },
   "entrypoints": [
     "static/css/main.4682c060.css",
-    "static/js/main.31173352.js"
+    "static/js/main.8d4a0bc5.js"
   ]
 }
