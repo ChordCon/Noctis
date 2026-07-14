@@ -141,19 +141,32 @@ const Caller = ({ user, checkAndLogout }) => {
   }, [user]);
 
   useEffect(() => {
-    if (itemLists.weapons.length > 0 || presets.length > 0) {
-      const weaponItems = itemLists.weapons.map((item) => ({
+    if (Object.keys(itemLists).length === 0) return;
+
+    const newCombinedLists = {};
+    const categories = Object.keys(itemLists); // weapons, OffHand, 등
+
+    categories.forEach((cat) => {
+      // 1. 해당 카테고리 아이템
+      const items = itemLists[cat].map((item) => ({
         ...item,
         type: "item",
       }));
+
+      // 2. 프리셋 (모든 카테고리에서 프리셋을 선택할 수 있게 함)
       const presetItems = presets.map((p) => ({
         name: p.name,
         url: null,
         type: "preset",
         data: p.data,
       }));
-      setCombinedWeaponList([...weaponItems, ...presetItems]);
-    }
+
+      newCombinedLists[cat] = [...items, ...presetItems].sort((a, b) =>
+        a.name.localeCompare(b.name, "ko-KR"),
+      );
+    });
+
+    setCombinedWeaponList(newCombinedLists);
   }, [itemLists, presets]);
 
   //콜러의 시트 목록을 가져오는 함수
@@ -615,8 +628,14 @@ const Caller = ({ user, checkAndLogout }) => {
                         .fill()
                         .map((_, c) => {
                           const cellKey = `${pIdx}-${r}-${c}`;
-                          const catKey = colCategoryMap[c]; // 해당 열의 컬렉션 키 확인
-                          const list = itemLists[catKey]; // 위에서 만든 itemLists에서 리스트 가져오기
+                          const catKey = colCategoryMap[c]; // 해당 열의 카테고리 확인
+                          const isItemColumn = c >= 2 && c <= 15; // 아이템 카테고리 열 범위 (2~15)
+
+                          // 열에 맞는 리스트 가져오기 (해당 카테고리가 없으면 빈 배열)
+                          const currentList = isItemColumn
+                            ? combinedWeaponList[catKey] || []
+                            : [];
+
                           return (
                             <td
                               key={c}
@@ -627,7 +646,7 @@ const Caller = ({ user, checkAndLogout }) => {
                               }}
                             >
                               {c === 16 ? (
-                                // [추가] 마지막 열에 프리셋 저장 버튼 배치
+                                // [마지막 열] 프리셋 저장 버튼
                                 <div
                                   style={{
                                     width: "100%",
@@ -643,7 +662,7 @@ const Caller = ({ user, checkAndLogout }) => {
                                   </button>
                                 </div>
                               ) : c === 0 ? (
-                                // Roll 드롭다운
+                                // [0번 열] Roll 드롭다운
                                 <select
                                   value={sheetData[cellKey] || ""}
                                   onChange={(e) =>
@@ -654,7 +673,6 @@ const Caller = ({ user, checkAndLogout }) => {
                                   }
                                   style={{
                                     width: "100%",
-                                    transition: "width 0.2s", // 부드러운 애니메이션
                                     background: "#222",
                                     color: "white",
                                   }}
@@ -675,7 +693,7 @@ const Caller = ({ user, checkAndLogout }) => {
                                   ))}
                                 </select>
                               ) : c === 1 ? (
-                                /* [신규] Comment 입력창 */
+                                // [1번 열] Comment 입력창
                                 <input
                                   value={sheetData[cellKey] || ""}
                                   onChange={(e) =>
@@ -692,46 +710,20 @@ const Caller = ({ user, checkAndLogout }) => {
                                   }}
                                   placeholder="코멘트 입력"
                                 />
-                              ) : list ? (
-                                // [수정] 무기 등 아이템 열에 검색 가능한 컴포넌트 적용
+                              ) : isItemColumn ? (
+                                // [2~15번 열] 각 카테고리별 SearchableSelect 적용
                                 <SearchableSelect
-                                  list={combinedWeaponList} // 위에서 만든 통합 리스트
+                                  list={currentList} // 해당 열 카테고리 리스트 전달
                                   value={sheetData[cellKey] || ""}
-                                  onChange={(selectedName, presetData) => {
-                                    if (presetData) {
-                                      // 1. 프리셋 적용 로직
-                                      setSheetData((prev) => {
-                                        const newData = { ...prev };
-                                        Object.keys(presetData).forEach(
-                                          (key) => {
-                                            // 프리셋 데이터의 키(pIdx-r-c)를 현재 행의 좌표에 맞게 매핑하거나 그대로 사용
-                                            // 여기서는 presetData에 담긴 키가 이미 정확한 좌표라면 그대로 덮어씁니다.
-                                            const [_, __, c] = key.split("-");
-                                            newData[`${pIdx}-${r}-${c}`] =
-                                              presetData[key];
-                                          },
-                                        );
-                                        return newData;
-                                      });
-                                    } else {
-                                      // 2. 일반 아이템 선택 로직
-                                      const selectedItem =
-                                        itemLists.weapons.find(
-                                          (w) => w.name === selectedName,
-                                        );
-                                      setSheetData((prev) => ({
-                                        ...prev,
-                                        [cellKey]: selectedName,
-                                      }));
-                                      setCellImages((prev) => ({
-                                        ...prev,
-                                        [cellKey]: selectedItem?.url,
-                                      }));
-                                    }
+                                  onChange={(selectedName) => {
+                                    setSheetData((prev) => ({
+                                      ...prev,
+                                      [cellKey]: selectedName,
+                                    }));
                                   }}
                                 />
                               ) : (
-                                // 그 외 일반 입력란 (Name 등)
+                                // [기타 열] 일반 입력
                                 <input
                                   value={sheetData[cellKey] || ""}
                                   onChange={(e) =>
