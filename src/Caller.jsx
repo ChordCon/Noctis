@@ -127,43 +127,31 @@ const Caller = ({ user, checkAndLogout }) => {
 
   // 컴포넌트 마운트 시 프리셋 로드
   useEffect(() => {
-    const fetchPresets = async () => {
-      const q = query(
-        collection(db, "presets"),
-        where("callerName", "==", user.name),
-      );
-      const querySnapshot = await getDocs(q);
-      setPresets(
-        querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-      );
-    };
-    if (user?.name) fetchPresets();
-  }, [user]);
-
-  useEffect(() => {
     if (Object.keys(itemLists).length === 0) return;
 
     const newCombinedLists = {};
-    const categories = Object.keys(itemLists); // weapons, OffHand, 등
+    const categories = Object.keys(itemLists);
 
     categories.forEach((cat) => {
       // 1. 해당 카테고리 아이템
-      const items = itemLists[cat].map((item) => ({
-        ...item,
-        type: "item",
-      }));
+      const items = itemLists[cat].map((item) => ({ ...item, type: "item" }));
 
-      // 2. 프리셋 (모든 카테고리에서 프리셋을 선택할 수 있게 함)
-      const presetItems = presets.map((p) => ({
-        name: p.name,
-        url: null,
-        type: "preset",
-        data: p.data,
-      }));
-
-      newCombinedLists[cat] = [...items, ...presetItems].sort((a, b) =>
-        a.name.localeCompare(b.name, "ko-KR"),
-      );
+      // 2. 프리셋은 'weapons' 카테고리에만 추가
+      if (cat === "weapons") {
+        const presetItems = presets.map((p) => ({
+          name: p.name,
+          url: null,
+          type: "preset",
+          data: p.data,
+        }));
+        newCombinedLists[cat] = [...items, ...presetItems].sort((a, b) =>
+          a.name.localeCompare(b.name, "ko-KR"),
+        );
+      } else {
+        newCombinedLists[cat] = items.sort((a, b) =>
+          a.name.localeCompare(b.name, "ko-KR"),
+        );
+      }
     });
 
     setCombinedWeaponList(newCombinedLists);
@@ -171,33 +159,6 @@ const Caller = ({ user, checkAndLogout }) => {
 
   //콜러의 시트 목록을 가져오는 함수
   useEffect(() => {
-    const fetchMySheets = async () => {
-      // 디버깅: user 정보와 name이 제대로 넘어오는지 확인
-      console.log("현재 유저 정보:", user);
-
-      if (!user?.name) {
-        console.log("user.name이 없습니다.");
-        return;
-      }
-
-      try {
-        const sheetsRef = collection(db, "sheets");
-        const q = query(sheetsRef, where("callerName", "==", user.name));
-        const querySnapshot = await getDocs(q);
-
-        // 디버깅: 문서 개수 확인
-        console.log("가져온 문서 개수:", querySnapshot.size);
-
-        const list = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setMySheets(list);
-      } catch (e) {
-        console.error("시트 목록 로드 실패:", e);
-      }
-    };
-
     fetchMySheets();
   }, [user]);
 
@@ -225,8 +186,8 @@ const Caller = ({ user, checkAndLogout }) => {
       rows: sheet.rowCount,
       id: sheet.id,
     });
+    // 데이터가 undefined일 경우 빈 객체로 초기화
     setSheetData(sheet.data || {});
-    // cellImages 처리는 useEffect로 이관
   };
   useEffect(() => {
     if (!sheetConfig || !sheetData) return;
@@ -465,6 +426,44 @@ const Caller = ({ user, checkAndLogout }) => {
       console.error("저장 실패:", e);
       alert("저장에 실패했습니다.");
     }
+  };
+
+  useEffect(() => {
+    const fetchPresets = async () => {
+      const q = query(collection(db, "presets")); // 필요시 필터링 추가
+      const snapshot = await getDocs(q);
+      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setPresets(list);
+    };
+    fetchPresets();
+  }, []);
+
+  const applyPreset = (
+    presetData,
+    currentPIdx,
+    currentR,
+    selectedName,
+    cellKey,
+  ) => {
+    setSheetData((prev) => {
+      const newData = { ...prev };
+
+      // 1. 프리셋에 포함된 모든 아이템 적용
+      Object.keys(presetData).forEach((key) => {
+        // 키가 "0-8-c" 형태이므로 split("-") 하면 [0, 8, c]가 됨
+        const parts = key.split("-");
+        const col = parts[2]; // 컬럼 정보만 가져옴
+
+        // 현재 행/파티에 맞는 새로운 키 생성
+        const newKey = `${currentPIdx}-${currentR}-${col}`;
+        newData[newKey] = presetData[key];
+      });
+
+      // 2. 현재 선택한 셀(무기 칸)에 프리셋 이름 넣기
+      newData[cellKey] = selectedName;
+
+      return { ...newData };
+    });
   };
 
   // 2. 시트지 생성 팝업
@@ -715,13 +714,23 @@ const Caller = ({ user, checkAndLogout }) => {
                               ) : isItemColumn ? (
                                 // [2~15번 열] 각 카테고리별 SearchableSelect 적용
                                 <SearchableSelect
-                                  list={currentList} // 해당 열 카테고리 리스트 전달
+                                  list={currentList}
                                   value={sheetData[cellKey] || ""}
-                                  onChange={(selectedName) => {
-                                    setSheetData((prev) => ({
-                                      ...prev,
-                                      [cellKey]: selectedName,
-                                    }));
+                                  onChange={(selectedName, item) => {
+                                    if (item?.type === "preset") {
+                                      applyPreset(
+                                        item.data,
+                                        pIdx,
+                                        r,
+                                        selectedName,
+                                        cellKey,
+                                      );
+                                    } else {
+                                      setSheetData((prev) => ({
+                                        ...prev,
+                                        [cellKey]: selectedName,
+                                      }));
+                                    }
                                   }}
                                 />
                               ) : (

@@ -17,12 +17,7 @@ const SearchableSelect = ({ list, value, onChange }) => {
     const executeSelect = (item) => {
         if (!item) return;
 
-        // 프리셋 데이터가 있으면 함께 전달
-        if (item.type === "preset") {
-            onChange(item.name, item.data);
-        } else {
-            onChange(item.name, null);
-        }
+        onChange(item.name, item);
 
         setInputValue(item.name);
         setIsOpen(false);
@@ -61,7 +56,7 @@ const SearchableSelect = ({ list, value, onChange }) => {
     };
 
     return (
-        <div style={{ position: "relative", width: "100%" }}>
+        <div style={{ fontSize: "clamp(12px, 1.2vw, 18px)", position: "relative", width: "100%" }}>
             <input
                 value={inputValue}
                 placeholder="검색/선택"
@@ -84,7 +79,8 @@ const SearchableSelect = ({ list, value, onChange }) => {
                 <div style={{ position: "absolute", zIndex: 99, background: "#333", width: "100%", maxHeight: "200px", overflowY: "auto", border: "1px solid #555" }}>
                     {filteredList.map((item, idx) => (
                         <div
-                            key={item.name}
+                            // 수정: 인덱스를 조합하여 확실하게 고유한 키값 생성
+                            key={`${item.name}-${idx}`}
                             onMouseDown={() => executeSelect(item)}
                             style={{
                                 padding: "5px",
