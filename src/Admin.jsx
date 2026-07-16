@@ -169,13 +169,14 @@ const Admin = ({ user, checkAndLogout }) => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        fontSize: "2rem",
         flexDirection: "column",
         gap: "20px",
         padding: "20px",
       }}
     >
-      <h2 style={{ margin: "10px" }}>관리자 메뉴</h2>
+      <h2 className="responsive-title" style={{ margin: "10px" }}>
+        관리자 메뉴
+      </h2>
       {/* 추가된 규칙 안내 박스 */}
       <div
         style={{
@@ -185,17 +186,20 @@ const Admin = ({ user, checkAndLogout }) => {
           background: "#333",
           borderRadius: "8px",
           border: "1px solid #555",
-          fontSize: "20px",
           textAlign: "left",
           color: "#ddd",
         }}
       >
         <p
+          className="responsive-text"
           style={{ margin: "0 0 10px 0", fontWeight: "bold", color: "#ffcc00" }}
         >
           [관리자 페이지 사용 방법]
         </p>
-        <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.6" }}>
+        <ul
+          className="responsive-text"
+          style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.6" }}
+        >
           <li>
             <strong>가입 요청 확인 버튼:</strong> 가입 요청 리스트가 나옵니다.
             이름과 길드를 확인 후 승인하세요.
@@ -253,9 +257,9 @@ const Admin = ({ user, checkAndLogout }) => {
                 top: "10px",
                 right: "15px",
                 background: "transparent",
+                fontSize: "30px",
                 border: "none",
                 color: "White",
-                fontSize: "28px",
                 cursor: "pointer",
                 fontWeight: "bold",
                 lineHeight: "1",
@@ -265,7 +269,9 @@ const Admin = ({ user, checkAndLogout }) => {
             </button>
             {showModal === "members" ? (
               <>
-                <h4 style={{ margin: "10px" }}>가입 요청 리스트</h4>
+                <h4 className="responsive-title" style={{ margin: "10px" }}>
+                  가입 요청 리스트
+                </h4>
                 {preMembers.map((m) => (
                   <div
                     key={m.id}
@@ -282,7 +288,10 @@ const Admin = ({ user, checkAndLogout }) => {
                     }}
                   >
                     {/* 닉네임과 길드명 표시 */}
-                    <span style={{ fontSize: "16px", margin: "0 15px" }}>
+                    <span
+                      className="responsive-text"
+                      style={{ margin: "0 15px" }}
+                    >
                       <strong>{m.name}</strong> |{" "}
                       <span style={{ color: "#00d4ff" }}>{m.guild}</span>
                     </span>
@@ -304,9 +313,13 @@ const Admin = ({ user, checkAndLogout }) => {
               </>
             ) : showModal === "addCaller" ? (
               <>
-                <h4 style={{ margin: "10px" }}>콜러 임명</h4>
+                <h4 className="responsive-title" style={{ margin: "10px" }}>
+                  콜러 임명
+                </h4>
                 <input
                   type="text"
+                  className="admin-input"
+                  style={{ width: "60%" }}
                   placeholder="사용자 닉네임"
                   value={callerName}
                   onChange={(e) => setCallerName(e.target.value)}
@@ -317,9 +330,13 @@ const Admin = ({ user, checkAndLogout }) => {
               </>
             ) : showModal === "addAdmin" ? (
               <>
-                <h4 style={{ margin: "10px" }}>관리자 임명</h4>
+                <h4 className="responsive-title" style={{ margin: "10px" }}>
+                  관리자 임명
+                </h4>
                 <input
                   type="text"
+                  className="admin-input"
+                  style={{ width: "60%" }}
                   placeholder="사용자 닉네임"
                   value={callerName}
                   onChange={(e) => setCallerName(e.target.value)}
@@ -338,8 +355,13 @@ const Admin = ({ user, checkAndLogout }) => {
                     margin: "10px",
                   }}
                 >
-                  <h4 style={{ margin: 0 }}>유저 관리</h4>
-                  <span style={{ fontSize: "20px", color: "#ffcc00" }}>
+                  <h4 className="responsive-title" style={{ margin: 0 }}>
+                    유저 관리
+                  </h4>
+                  <span
+                    className="responsive-title"
+                    style={{ color: "#ffcc00" }}
+                  >
                     (총 {allUsers.length}명)
                   </span>
                 </div>
@@ -370,9 +392,9 @@ const Admin = ({ user, checkAndLogout }) => {
                         }}
                       >
                         <p
+                          className="responsive-text"
                           style={{
                             margin: "0",
-                            fontSize: "16px",
                             fontWeight: "bold",
                           }}
                         >
@@ -389,11 +411,6 @@ const Admin = ({ user, checkAndLogout }) => {
                             <button
                               onClick={() => handleDemoteCaller(u.id, u.name)}
                               className="redBtn"
-                              style={{
-                                height: "40px",
-                                fontSize: "12px",
-                                padding: "4px 8px",
-                              }}
                             >
                               강 등
                             </button>
@@ -401,11 +418,6 @@ const Admin = ({ user, checkAndLogout }) => {
                           <button
                             onClick={() => handleKickUser(u.id, u.name)}
                             className="redBtn"
-                            style={{
-                              height: "40px",
-                              fontSize: "12px",
-                              padding: "4px 8px",
-                            }}
                           >
                             탈 퇴
                           </button>
@@ -413,7 +425,10 @@ const Admin = ({ user, checkAndLogout }) => {
                       </div>
 
                       {/* 하단: 참여 횟수 (고정 위치) */}
-                      <div style={{ fontSize: "13px", color: "#00d4ff" }}>
+                      <div
+                        className="responsive-text"
+                        style={{ color: "#00d4ff" }}
+                      >
                         {u.participationCount ? (
                           Object.entries(u.participationCount).map(
                             ([time, count]) => (

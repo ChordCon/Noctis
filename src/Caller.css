@@ -1,3 +1,13 @@
+.responsive-text {
+    /* 최소 12px, 화면의 1.2vw, 최대 18px */
+    font-size: clamp(12px, 1.2vw, 18px);
+}
+
+.responsive-title {
+    /* 제목용: 조금 더 크게 */
+    font-size: clamp(16px, 2vw, 24px);
+}
+
 .callerBtn {
     padding: 10px;
     cursor: pointer;
@@ -10,7 +20,7 @@
     /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
 
     /* 고급스러운 폰트 느낌 */
-    font-size: 16px;
+    font-size: clamp(12px, 1.2vw, 18px);
     font-weight: 500;
 
     /* 부드러운 전환 효과 */
@@ -35,7 +45,7 @@
     /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
 
     /* 고급스러운 폰트 느낌 */
-    font-size: 16px;
+    font-size: clamp(12px, 1.2vw, 18px);
     font-weight: 500;
 
     /* 부드러운 전환 효과 */

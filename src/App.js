@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { db } from "./firebase/firebase"; // 파이어베이스 설정 파일
 import { doc, getDoc, getDocs, collection, addDoc, query, where } from "firebase/firestore";
 import bcrypt from 'bcryptjs';
@@ -34,30 +34,42 @@ const Main = ({ user, navigate, checkAndLogout }) => {
 
 const Navbar = ({ user, onOpenModal, onLogout, checkAndLogout }) => {
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const canAccessAdmin = user?.role === 'admin';
   const canAccessCaller = user?.role === 'admin' || user?.role === 'caller';
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setIsMenuOpen(false); // 창이 커지면 드롭다운 자동 닫기
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleNavClick = async (path, role) => {
+    setIsMenuOpen(false);
     const isTampered = await checkAndLogout(role);
-    if (!isTampered) navigate(path); // 조작이 없을 때만 이동
+    if (!isTampered) navigate(path);
   };
+
   return (
     <header className="navbar">
+      {/* 1. 햄버거 버튼 (모바일 전용) */}
+      <button className="menu-toggle" style={{ display: 'none' }} onClick={() => setIsMenuOpen(!isMenuOpen)}>☰</button>
+
+      {/* 2. 기존 PC 메뉴들 (nav-left, nav-center, nav-right 그대로 유지) */}
       <div className="nav-left">
-        {canAccessAdmin && (
-          <button className='appBtn' onClick={() => handleNavClick('/admin', 'admin')}>관리자</button>
-        )}
-        {canAccessCaller && (
-          <button className='appBtn' onClick={() => handleNavClick('/caller', 'caller')}>콜 러</button>
-        )}
+        {canAccessAdmin && <button className='appBtn' onClick={() => handleNavClick('/admin', 'admin')}>관리자</button>}
+        {canAccessCaller && <button className='appBtn' onClick={() => handleNavClick('/caller', 'caller')}>콜 러</button>}
       </div>
+
       <div className="nav-center">
-        <img
-          src={logoText} // public 폴더에 있다면 바로 경로 입력, 아니면 import
-          alt="로고 문구"
-          onClick={() => navigate('/')}
-          style={{ cursor: 'pointer', height: '40px' }} // 높이 조절
-        />
+        <img src={logoText} alt="로고" onClick={() => navigate('/')} style={{ cursor: 'pointer', height: '40px' }} />
       </div>
+
       <div className="nav-right">
         {user ? (
           <>
@@ -73,6 +85,24 @@ const Navbar = ({ user, onOpenModal, onLogout, checkAndLogout }) => {
           </>
         )}
       </div>
+
+      {/* 3. 모바일 전용 드롭다운 */}
+      {isMenuOpen && (
+        <div className="mobile-dropdown">
+          {user && <span>{user.name}님 환영합니다</span>}
+          {canAccessAdmin && <button className='appBtn' onClick={() => handleNavClick('/admin', 'admin')}>관리자</button>}
+          {canAccessCaller && <button className='appBtn' onClick={() => handleNavClick('/caller', 'caller')}>콜 러</button>}
+          <button className='appBtn' onClick={() => handleNavClick('/', 'member')}>홈으로</button>
+          {user ? (
+            <button className='appBtn' onClick={() => { setIsMenuOpen(false); onLogout(); }}>로그아웃</button>
+          ) : (
+            <>
+              <button className='appBtn' onClick={() => { setIsMenuOpen(false); onOpenModal('login'); }}>로그인</button>
+              <button className='appBtn' onClick={() => { setIsMenuOpen(false); onOpenModal('signup'); }}>회원가입</button>
+            </>
+          )}
+        </div>
+      )}
     </header>
   );
 };
@@ -87,30 +117,27 @@ export default function App() {
   const [signupGuild, setSignupGuild] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
     const checkSessionSecurity = async () => {
-      const savedUser = JSON.parse(sessionStorage.getItem('user'));
+      // [변경] local 또는 session 스토리지 중 있는 것을 가져옴
+      const rawData = localStorage.getItem('user') || sessionStorage.getItem('user');
+      const savedUser = rawData ? JSON.parse(rawData) : null;
 
       if (savedUser?.uid) {
         try {
           const userSnap = await getDoc(doc(db, "users", savedUser.uid));
-
-          // 1. 유저가 DB에 없거나, 권한이 세션과 다른 경우
           if (!userSnap.exists() || userSnap.data().role !== savedUser.role) {
-            alert("보안 위반이 감지되었습니다. 로그아웃합니다.");
             handleLogout();
             return;
           }
-
-          // 2. 정상이라면 상태 유지
           setUser(savedUser);
         } catch (error) {
           handleLogout();
         }
       }
     };
-
     checkSessionSecurity();
   }, []);
 
@@ -144,7 +171,11 @@ export default function App() {
         };
 
         setUser(userSession);
-        sessionStorage.setItem('user', JSON.stringify(userSession));
+        if (rememberMe) {
+          localStorage.setItem('user', JSON.stringify(userSession));
+        } else {
+          sessionStorage.setItem('user', JSON.stringify(userSession));
+        }
         alert(`${userData.name}님 환영합니다.`);
         setModalType(null);
       } else {
@@ -157,7 +188,7 @@ export default function App() {
   };
 
   const checkAndLogout = async (requiredRole) => {
-    const savedUser = JSON.parse(sessionStorage.getItem('user'));
+    const savedUser = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user'));
 
     if (!savedUser?.uid || !savedUser?.name) {
       handleLogout();
@@ -199,6 +230,7 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     sessionStorage.removeItem('user');
+    localStorage.removeItem('user'); // [추가]
     window.location.href = "/Noctis/#/";
   };
 
@@ -310,7 +342,32 @@ export default function App() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                   />
-                  <p>길드 변경시 관리자, 오피서에게 디엠주세요</p>
+                  <p>길드 변경시  오피서에게 디엠주세요</p>
+
+                  {/* [추가] 자동 로그인 체크박스 */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center", // 전체 중앙 정렬
+                    gap: "8px",
+                    marginBottom: "10px"
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      style={{ margin: 0, cursor: "pointer" }}
+                    />
+                    <label style={{
+                      color: "white",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap"
+                    }}>
+                      로그인 상태 유지
+                    </label>
+                  </div>
+
                   <button className='appBtn' style={{ width: "60%" }} type="submit">로그인</button>
                 </div>
               </form>

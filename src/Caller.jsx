@@ -482,14 +482,14 @@ const Caller = ({ user, checkAndLogout }) => {
                 background: "transparent",
                 border: "none",
                 color: "#fff",
-                fontSize: "1.5rem",
+                fontSize: "30px",
                 cursor: "pointer",
                 lineHeight: "1",
               }}
             >
               &times;
             </button>
-            <h2>시트지 생성</h2>
+            <h2 className="responsive-title">시트지 생성</h2>
             <input name="sheetName" placeholder="시트지 이름" required />
             <input
               name="rowCount"
@@ -536,9 +536,11 @@ const Caller = ({ user, checkAndLogout }) => {
           <div
             style={{
               display: "flex",
-              justifyContent: "center",
-              gap: "10px",
+              justifyContent: "center", // 중앙 정렬 유지
+              flexWrap: "wrap", // 공간 부족 시 자동 줄바꿈
+              gap: "10px", // 버튼 간 간격
               marginBottom: "20px",
+              padding: "0 10px", // 화면 끝에 붙지 않게 여백 추가
             }}
           >
             <button
@@ -576,7 +578,7 @@ const Caller = ({ user, checkAndLogout }) => {
               삭 제
             </button>
           </div>
-          <h2>{name}</h2>
+          <h2 className="responsive-title">{name}</h2>
         </div>
         {partyData.map((party, pIdx) => (
           <div key={pIdx} style={{ marginBottom: "40px" }}>
@@ -610,8 +612,8 @@ const Caller = ({ user, checkAndLogout }) => {
                       <th
                         key={h}
                         colSpan={i >= 4 ? 2 : 1}
+                        className="responsive-text"
                         style={{
-                          fontSize: "16px",
                           border: "1px solid #555",
                           padding: "8px 0",
                         }}
@@ -761,13 +763,13 @@ const Caller = ({ user, checkAndLogout }) => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        fontSize: "2rem",
         flexDirection: "column",
         gap: "10px",
       }}
     >
       {/* 콜러 페이지 사용 방법 가이드 박스 */}
       <div
+        className="responsive-text"
         style={{
           width: "90%",
           maxWidth: "1000px",
@@ -777,7 +779,6 @@ const Caller = ({ user, checkAndLogout }) => {
           borderRadius: "8px",
           border: "1px solid #555",
           color: "#ddd",
-          fontSize: "20px",
         }}
       >
         <p
@@ -785,32 +786,36 @@ const Caller = ({ user, checkAndLogout }) => {
         >
           [콜러 페이지 사용 방법]
         </p>
-        <p>
+        <p className="responsive-text">
           <strong>시트지 생성 방법:</strong> 시트지 생성하기 버튼 클릭 후 이름,
           인원수를 입력합니다. 다음 버튼을 눌러 무기/방어구 선택 및 코멘트를
           입력하세요. '저장' 버튼을 클릭하면 내 시트지 목록에 저장됩니다.
         </p>
-        <p>
+        <p className="responsive-text">
           <strong>시트지 수정, 삭제, 업로드:</strong> 내 시트지 목록에서
           시트지를 클릭하여 수정 후 위쪽 '저장' 버튼을 클릭하세요. 삭제는 '삭제'
           버튼, 멤버들에게 공유하려면 '업로드' 버튼을 클릭합니다. 이전 버튼으로
           목록으로 돌아갈 수 있습니다.
         </p>
-        <p>
+        <p className="responsive-text">
           <strong>업로드 버튼:</strong> 날짜, 집합시간, 무기티어, 방어구티어,
           푸드티어를 입력하고 업로드하려는 시트지를 선택한 후 업로드하기 버튼을
           클릭합니다.
         </p>
       </div>
 
-      <h2 style={{ margin: "0" }}>환영합니다, {user?.name}님!</h2>
+      <h2 className="responsive-title" style={{ margin: "0" }}>
+        환영합니다, {user?.name}님!
+      </h2>
 
       <button className="callerBtn" onClick={() => setShowCreateModal(true)}>
         시트지 생성하기
       </button>
 
       <div style={{ marginBottom: "20px", textAlign: "center" }}>
-        <h3 style={{ margin: "10px" }}>내 시트지 목록</h3>
+        <h3 className="responsive-title" style={{ margin: "10px" }}>
+          내 시트지 목록
+        </h3>
         {mySheets.length > 0 ? (
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
             {mySheets.map((sheet) => (
@@ -828,7 +833,7 @@ const Caller = ({ user, checkAndLogout }) => {
           <div className="modal-overlay">
             <div className="login-modal">
               <form onSubmit={handleUpload} className="login-form">
-                <h4>시트지 데이터 업로드</h4>
+                <h4 className="responsive-title">시트지 데이터 업로드</h4>
                 <div
                   style={{
                     display: "flex",

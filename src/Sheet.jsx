@@ -13,6 +13,7 @@ import {
   deleteDoc,
   increment,
   setDoc,
+  onSnapshot,
 } from "firebase/firestore";
 
 const Sheet = ({ user, checkAndLogout }) => {
@@ -23,35 +24,9 @@ const Sheet = ({ user, checkAndLogout }) => {
   const [showCommentModal, setShowCommentModal] = useState(null); // {pIdx, r} 또는 null
   const [comment, setComment] = useState(""); // 팝업 내 코멘트 내용
 
-  const fetchRecords = async () => {
-    const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    setRecords(
-      querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-    );
-  };
-
   useEffect(() => {
-    const verifySheetAccess = async () => {
-      // 시트지는 최소 'member' 권한 이상인지 확인
-      // 만약 'admin'이나 'caller'도 들어와야 한다면 checkAndLogout 함수 내의 조건문에 따라 처리됨
-      const isTampered = await checkAndLogout("member");
-
-      if (isTampered) {
-        // 변조가 감지되면 checkAndLogout 내부에서 로그아웃 처리가 완료됨
-        navigate("/");
-      }
-    };
-
-    verifySheetAccess();
-  }, [checkAndLogout, navigate]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      // 1. 기록 로드
-      fetchRecords();
-
-      // 2. 카테고리별 이미지 데이터 로드
+    // 1. 이미지 로드 로직 (한 번만 실행)
+    const fetchImages = async () => {
       const categories = [
         "weapons",
         "OffHand",
@@ -62,26 +37,54 @@ const Sheet = ({ user, checkAndLogout }) => {
         "Food",
         "Potion",
       ];
-
       const newImages = {};
       await Promise.all(
         categories.map(async (cat) => {
           try {
             const docRef = doc(db, cat, "list");
             const snap = await getDoc(docRef);
-            if (snap.exists()) {
-              newImages[cat] = snap.data();
-            }
+            if (snap.exists()) newImages[cat] = snap.data();
           } catch (e) {
-            console.error(`${cat} 데이터 로드 실패:`, e);
+            console.error(`${cat} 로드 실패:`, e);
           }
         }),
       );
       setItemImages(newImages);
     };
-    fetchData();
-  }, []);
 
+    fetchImages();
+
+    // 2. 기록 실시간 구독 (onSnapshot)
+    const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const updatedRecords = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setRecords(updatedRecords);
+
+      // 팝업이 열려있다면 팝업 데이터만 부분 업데이트
+      setSelectedRecord((prev) => {
+        if (!prev) return null;
+        const latest = updatedRecords.find((r) => r.id === prev.id);
+
+        // 내용이 실제로 바뀐 경우에만 상태를 교체하여 리렌더링 최소화
+        if (
+          latest &&
+          JSON.stringify(latest.sheetContent) !==
+            JSON.stringify(prev.sheetContent)
+        ) {
+          return { ...prev, sheetContent: latest.sheetContent };
+        }
+        return prev;
+      });
+    });
+
+    // 컴포넌트 언마운트 시 구독 해제
+    return () => unsubscribe();
+  }, []); // 의존성 배열을 비워두어 컴포넌트 마운트 시 딱 한 번만 실행
   const handleDeleteRecord = async (e, recordId, callerName) => {
     e.stopPropagation(); // 행 클릭 이벤트(모달 열기) 방지
 
@@ -245,8 +248,7 @@ const Sheet = ({ user, checkAndLogout }) => {
   };
 
   // 모달 닫기 공통 함수
-  const handleCloseModal = async () => {
-    await fetchRecords(); // 닫을 때 최신 상태 불러오기
+  const handleCloseModal = () => {
     setSelectedRecord(null);
   };
 
@@ -314,6 +316,7 @@ const Sheet = ({ user, checkAndLogout }) => {
           }}
         >
           <p
+            className="responsive-text"
             style={{
               margin: "0 0 10px 0",
               fontWeight: "bold",
@@ -322,7 +325,10 @@ const Sheet = ({ user, checkAndLogout }) => {
           >
             [시트지 사용 방법]
           </p>
-          <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.6" }}>
+          <ul
+            className="responsive-text"
+            style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.6" }}
+          >
             <li>
               시트지 목록의 날짜, 시간등을 확인한 후 작성하려는 시트지를
               클릭해주세요.
@@ -333,105 +339,120 @@ const Sheet = ({ user, checkAndLogout }) => {
             </li>
           </ul>
         </div>
-        <h2 style={{ margin: "10px" }}>시트지 목록</h2>
+        <h2 className="responsive-title" style={{ margin: "10px" }}>
+          시트지 목록
+        </h2>
+        {/* PC 버전 테이블 */}
         <table
           border="1"
+          className="desktop-only-table"
           style={{
             width: "90%",
-            maxWidth: "1200px",
             margin: "10px 0",
             borderCollapse: "collapse",
             cursor: "pointer",
-            textAlign: "center", // 셀 내용 중앙 정렬
+            textAlign: "center",
           }}
         >
           <thead>
-            <tr style={{ fontSize: "20px", background: "#333" }}>
-              <th style={{ padding: "5px", width: "20px" }}>날짜</th>
-              <th style={{ padding: "5px", width: "70px" }}>시트지 이름</th>
-              <th style={{ padding: "5px", width: "30px" }}>집합 시간</th>
-              <th style={{ padding: "5px", width: "200px" }}>코멘트</th>
-              <th style={{ padding: "5px", width: "70px" }}>작성자</th>
-              <th style={{ padding: "5px", width: "20px" }}>관리</th>
+            <tr className="responsive-text" style={{ background: "#333" }}>
+              <th style={{ padding: "5px" }}>날짜</th>
+              <th style={{ padding: "5px" }}>시트지</th>
+              <th style={{ padding: "5px" }}>집합 시간</th>
+              <th style={{ padding: "5px" }}>코멘트</th>
+              <th style={{ padding: "5px" }}>콜러</th>
+              <th style={{ padding: "5px" }}>관리</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="responsive-text">
             {records.map((r) => (
               <tr key={r.id} onClick={() => setSelectedRecord(r)}>
-                {/* 날짜 필드 조합하여 출력 (예: 2026.07.08) */}
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.date ? `${r.date} ` : ""}
-                </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.sheetName}
-                </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.time || "정보 없음"}UTC
+                <td style={{ padding: "5px" }}>{r.date || ""}</td>
+                <td style={{ padding: "5px" }}>{r.sheetName}</td>
+                <td style={{ padding: "5px" }}>
+                  {r.time || "정보 없음"} UTC
                   {r.time && (
-                    <div style={{ fontSize: "11px", color: "#00d4ff" }}>
+                    <div style={{ color: "#00d4ff", fontSize: "0.85em" }}>
                       {(() => {
                         const timeParts = String(r.time).split(":");
                         const hours = parseInt(timeParts[0]);
                         const minutes =
                           timeParts.length > 1 ? parseInt(timeParts[1]) : 0;
-
                         if (isNaN(hours)) return "";
-
                         let kstHours = (hours + 9) % 24;
-                        const formattedTime = `${String(kstHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-
-                        return `(한국시간 ${formattedTime})`;
+                        return `(한국시간 ${String(kstHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")})`;
                       })()}
                     </div>
                   )}
                 </td>
-                <td
-                  style={{
-                    fontSize: "14px",
-                    padding: "5px",
-                    textAlign: "left",
-                  }}
-                >
-                  {r.sheetComment
-                    ? r.sheetComment.length > 50
-                      ? `${r.sheetComment.substring(0, 50)}...`
-                      : r.sheetComment
-                    : "-"}
+                <td style={{ padding: "5px", textAlign: "left" }}>
+                  {r.sheetComment?.length > 50
+                    ? `${r.sheetComment.substring(0, 50)}...`
+                    : r.sheetComment || "-"}
                 </td>
-                <td style={{ fontSize: "15px", padding: "5px" }}>
-                  {r.callerName}
-                </td>
+                <td style={{ padding: "5px" }}>{r.callerName}</td>
                 <td
-                  style={{
-                    padding: "5px",
-                    verticalAlign: "middle", // 셀 안에서 세로 중앙
-                  }}
+                  style={{ padding: "5px" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    {(user?.role === "admin" ||
-                      user?.name === r.callerName) && (
-                      <button
-                        onClick={(e) =>
-                          handleDeleteRecord(e, r.id, r.callerName)
-                        }
-                        className="redBtn"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
+                  {(user?.role === "admin" || user?.name === r.callerName) && (
+                    <button
+                      onClick={(e) => handleDeleteRecord(e, r.id, r.callerName)}
+                      className="redBtn"
+                    >
+                      삭 제
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {/* 모바일 카드 뷰 */}
+        <div
+          className="mobile-only-cards"
+          style={{ width: "95%", margin: "10px auto" }}
+        >
+          {records.map((r) => (
+            <div
+              key={r.id}
+              className="party-card"
+              onClick={() => setSelectedRecord(r)}
+            >
+              <div className="card-header">[ {r.sheetName} ]</div>
+              <div className="card-info">날짜: {r.date || ""}</div>
+              <div className="card-info">
+                집합: {r.time || "정보 없음"} UTC
+                {r.time && (
+                  <span style={{ color: "#00d4ff", marginLeft: "5px" }}>
+                    {(() => {
+                      const timeParts = String(r.time).split(":");
+                      const hours = parseInt(timeParts[0]);
+                      const minutes =
+                        timeParts.length > 1 ? parseInt(timeParts[1]) : 0;
+                      if (isNaN(hours)) return "";
+                      let kstHours = (hours + 9) % 24;
+                      return `(한국시간 ${String(kstHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")})`;
+                    })()}
+                  </span>
+                )}
+              </div>
+              <div className="card-info">코멘트: {r.sheetComment || "-"}</div>
+              <div className="card-footer">
+                <span>콜러: {r.callerName}</span>
+                {(user?.role === "admin" || user?.name === r.callerName) && (
+                  <button
+                    onClick={(e) => handleDeleteRecord(e, r.id, r.callerName)}
+                    className="redBtn"
+                  >
+                    삭 제
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {selectedRecord && (
@@ -448,7 +469,7 @@ const Sheet = ({ user, checkAndLogout }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => handleCloseModal(null)}
+              onClick={handleCloseModal}
               style={{
                 position: "absolute", // 3. 절대 위치
                 top: "10px",
@@ -456,7 +477,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                 background: "transparent",
                 border: "none",
                 color: "white",
-                fontSize: "50px",
+                fontSize: "40px",
                 cursor: "pointer",
                 fontWeight: "bold",
               }}
@@ -466,34 +487,40 @@ const Sheet = ({ user, checkAndLogout }) => {
             <h2>{selectedRecord.sheetName} 상세 시트</h2>
             {/* 추가된 규칙 텍스트 */}
             <div
+              className="responsive-text"
               style={{
                 padding: "10px",
                 background: "#444",
                 borderRadius: "5px",
-                fontSize: "18px",
                 color: "#fff",
                 borderLeft: "4px solid #ffcc00", // 강조를 위한 왼쪽 테두리
               }}
             >
-              <strong>[시트지 규칙]</strong>
+              <strong
+                className="responsive-text"
+                style={{
+                  fontWeight: "bold",
+                  color: "#ffcc00", // 기존 #ffcc00보다 더 밝은 노란색으로 변경 가능
+                }}
+              >
+                [시트지 사용 방법]
+              </strong>
               <br />
               관리자, 콜러는 모든 칸에 입력과 삭제가 가능합니다.
               <br />
-              맴버는 확인 버튼을 눌러 한 칸에만 입력이 가능하고, 다른 칸에 다시
-              입력하려면 삭제 후 다시 확인 버튼을 눌러주세요.
+              맴버는 확인 버튼을 눌러 한 칸에만 입력이 가능하고,
+              <br /> 다른 칸에 다시 입력하려면 삭제 후 다시 확인 버튼을
+              눌러주세요.
               <br />
               <br />
-              시트지 요구 티어가 8티어인 경우 8티 장비를 사서 입고 오시는게
-              아니라
+              4.4, 5.3등 가격을 확인 후 저렴한 가격의 장비를 입어주세요.
+              <br /> 같은 부위의 장비가 2개인 경우 콜러에게 문의 해주세요.
               <br />
-              경매장에서 4.4, 5.3, 6.2, 7.1, 8티어의 가격을 확인하시고 가장
-              저렴한 가격의 장비를 입어주세요.
-              <br />
-              장비 이름을 모르는 경우 이미지에 마우스를 잠시 올려두면 이름이
-              나옵니다.
+              이미지에 마우스를 잠시 올려두면 장비의 이름이 나옵니다.
             </div>
             {/* 1. 상단 정보 표시부 */}
             <div
+              className="responsive-text"
               style={{
                 padding: "10px",
                 background: "#333",
@@ -502,7 +529,6 @@ const Sheet = ({ user, checkAndLogout }) => {
                 flexWrap: "wrap", // 화면이 작아지면 줄바꿈
                 gap: "10px", // 항목 간의 간격
                 alignItems: "center",
-                fontSize: "20px",
               }}
             >
               <p style={{ margin: 0, color: "#ffcc00" }}>
@@ -586,6 +612,7 @@ const Sheet = ({ user, checkAndLogout }) => {
             </div>
             {/* 추가: 코멘트 표시부 */}
             <div
+              className="responsive-text"
               style={{
                 marginBottom: "15px",
                 padding: "10px",
@@ -593,7 +620,6 @@ const Sheet = ({ user, checkAndLogout }) => {
                 border: "1px solid #444",
                 borderRadius: "5px",
                 color: "#eee",
-                fontSize: "20px",
                 textAlign: "left",
               }}
             >
@@ -631,13 +657,13 @@ const Sheet = ({ user, checkAndLogout }) => {
                     }}
                   >
                     <button className="sheetBtn" onClick={handleFinalConfirm}>
-                      확인
+                      확 인
                     </button>
                     <button
                       className="redBtn"
                       onClick={() => setShowCommentModal(null)}
                     >
-                      닫기
+                      닫 기
                     </button>
                   </div>
                 </div>
@@ -683,173 +709,384 @@ const Sheet = ({ user, checkAndLogout }) => {
                             {pIdx + 1} 파티
                           </h3>
                         )}
-
-                        <table
-                          border="1"
-                          style={{
-                            borderCollapse: "collapse",
-                            color: "white",
-                            width: "100%",
-                            border: "2px solid #fff",
-                            tableLayout: "fixed",
-                          }}
-                        >
-                          <colgroup>
-                            <col style={{ width: "100px" }} />
-                            <col style={{ width: "80px" }} />
-                            <col style={{ width: "120px" }} />
-                            <col style={{ width: "200px" }} />
-                            {Array.from({ length: 14 }).map((_, i) => (
-                              <col key={i} style={{ width: "60px" }} />
-                            ))}
-                          </colgroup>
-                          <thead>
-                            <tr
-                              style={{
-                                background: "#333",
-                                fontSize: "12px",
-                                border: "2px solid #fff",
-                              }}
-                            >
-                              {headers.map((h, i) => (
-                                <th
-                                  key={i}
-                                  colSpan={h.span}
-                                  style={{
-                                    width: h.span === 2 ? "100px" : "50px",
-                                  }}
-                                >
-                                  {h.name}
-                                </th>
+                        <div className="desktop-only-table">
+                          <table
+                            border="1"
+                            style={{
+                              borderCollapse: "collapse",
+                              color: "white",
+                              width: "100%",
+                              border: "2px solid #fff",
+                              tableLayout: "fixed",
+                            }}
+                          >
+                            <colgroup>
+                              <col style={{ width: "100px" }} />
+                              <col style={{ width: "80px" }} />
+                              <col style={{ width: "120px" }} />
+                              <col style={{ width: "200px" }} />
+                              {Array.from({ length: 14 }).map((_, i) => (
+                                <col key={i} style={{ width: "60px" }} />
                               ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Array.from({ length: rowCount }).map((_, r) => {
-                              const isLocked =
-                                !!selectedRecord.sheetContent[
-                                  `locked-${pIdx}-${r}`
-                                ];
-                              const rowName =
-                                selectedRecord.sheetContent[`${pIdx}-${r}-2`] ||
-                                "";
-                              const isAdminOrCaller =
-                                user?.role === "admin" ||
-                                user?.role === "caller";
-                              const isMyRow = rowName === user?.name;
-                              const canConfirm = !isLocked;
-                              const canDelete =
-                                isLocked && (isAdminOrCaller || isMyRow);
-
-                              return (
-                                <tr key={`${pIdx}-${r}`}>
-                                  <td
+                            </colgroup>
+                            <thead>
+                              <tr
+                                style={{
+                                  background: "#333",
+                                  fontSize: "12px",
+                                  border: "2px solid #fff",
+                                }}
+                              >
+                                {headers.map((h, i) => (
+                                  <th
+                                    key={i}
+                                    colSpan={h.span}
                                     style={{
-                                      border: "1px solid #333",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      height: "57px",
+                                      width: h.span === 2 ? "100px" : "50px",
                                     }}
                                   >
-                                    {canConfirm && (
-                                      <button
-                                        onClick={() =>
-                                          handleInitiateConfirm(pIdx, r)
-                                        }
-                                        className="sheetBtn"
-                                      >
-                                        참 여
-                                      </button>
-                                    )}
-                                    {canDelete && (
-                                      <button
-                                        onClick={() => handleUnlock(pIdx, r)}
-                                        className="redBtn"
-                                      >
-                                        삭 제
-                                      </button>
-                                    )}
-                                  </td>
-                                  {Array.from({ length: 17 }).map((_, c) => {
-                                    const cellKey = `${pIdx}-${r}-${c}`;
-                                    const value =
-                                      selectedRecord.sheetContent[cellKey] ||
-                                      "";
-                                    const isAdminOrCaller =
-                                      user?.role === "admin" ||
-                                      user?.role === "caller";
-                                    const isInputEnabled =
-                                      !isLocked &&
-                                      (c === 1 || c === 2) &&
-                                      isAdminOrCaller;
-                                    return (
-                                      <td
-                                        key={c}
-                                        style={{
-                                          border: "1px solid #555",
-                                          textAlign: "center",
-                                        }}
-                                      >
-                                        {isInputEnabled ? (
-                                          <input
-                                            value={value}
-                                            onChange={(e) =>
-                                              handleInputChange(
-                                                pIdx,
-                                                r,
-                                                c,
-                                                e.target.value,
-                                              )
-                                            }
-                                            style={{
-                                              width: "90%",
-                                              background: "#444",
-                                              color: "white",
-                                              border: "none",
-                                            }}
-                                          />
-                                        ) : colCategoryMap[c] &&
-                                          itemImages[colCategoryMap[c]]?.[
-                                            value
-                                          ] ? (
-                                          <img
-                                            src={
-                                              itemImages[colCategoryMap[c]][
-                                                value
-                                              ]
-                                            }
-                                            alt={value}
-                                            title={value} // 이 줄을 추가하세요!
-                                            style={{
-                                              width: "50px",
-                                              height: "50px",
-                                              verticalAlign: "middle",
-                                              cursor: "help",
-                                            }}
-                                          />
-                                        ) : (
-                                          <span
-                                            style={{
-                                              fontSize: "14px",
-                                              fontWeight: "bold",
-                                              height: "57px",
-                                              display: "flex",
-                                              alignItems: "center",
-                                              justifyContent: "center",
-                                            }}
-                                          >
-                                            {value}
-                                          </span>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                                    {h.name}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.from({ length: rowCount }).map((_, r) => {
+                                const isLocked =
+                                  !!selectedRecord.sheetContent[
+                                    `locked-${pIdx}-${r}`
+                                  ];
+                                const rowName =
+                                  selectedRecord.sheetContent[
+                                    `${pIdx}-${r}-2`
+                                  ] || "";
+                                const isAdminOrCaller =
+                                  user?.role === "admin" ||
+                                  user?.role === "caller";
+                                const isMyRow = rowName === user?.name;
+                                const canConfirm = !isLocked;
+                                const canDelete =
+                                  isLocked && (isAdminOrCaller || isMyRow);
+
+                                return (
+                                  <tr key={`${pIdx}-${r}`}>
+                                    <td
+                                      style={{
+                                        border: "1px solid #333",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        height: "57px",
+                                      }}
+                                    >
+                                      {canConfirm && (
+                                        <button
+                                          onClick={() =>
+                                            handleInitiateConfirm(pIdx, r)
+                                          }
+                                          className="sheetBtn"
+                                        >
+                                          참 여
+                                        </button>
+                                      )}
+                                      {canDelete && (
+                                        <button
+                                          onClick={() => handleUnlock(pIdx, r)}
+                                          className="redBtn"
+                                        >
+                                          삭 제
+                                        </button>
+                                      )}
+                                    </td>
+                                    {Array.from({ length: 17 }).map((_, c) => {
+                                      const cellKey = `${pIdx}-${r}-${c}`;
+                                      const value =
+                                        selectedRecord.sheetContent[cellKey] ||
+                                        "";
+                                      const isAdminOrCaller =
+                                        user?.role === "admin" ||
+                                        user?.role === "caller";
+                                      const isInputEnabled =
+                                        !isLocked &&
+                                        (c === 1 || c === 2) &&
+                                        isAdminOrCaller;
+                                      return (
+                                        <td
+                                          key={c}
+                                          style={{
+                                            border: "1px solid #555",
+                                            textAlign: "center",
+                                          }}
+                                        >
+                                          {isInputEnabled ? (
+                                            <input
+                                              value={value}
+                                              onChange={(e) =>
+                                                handleInputChange(
+                                                  pIdx,
+                                                  r,
+                                                  c,
+                                                  e.target.value,
+                                                )
+                                              }
+                                              style={{
+                                                width: "90%",
+                                                background: "#444",
+                                                color: "white",
+                                                border: "none",
+                                              }}
+                                            />
+                                          ) : colCategoryMap[c] &&
+                                            itemImages[colCategoryMap[c]]?.[
+                                              value
+                                            ] ? (
+                                            <img
+                                              src={
+                                                itemImages[colCategoryMap[c]][
+                                                  value
+                                                ]
+                                              }
+                                              alt={value}
+                                              title={value} // 이 줄을 추가하세요!
+                                              style={{
+                                                width: "50px",
+                                                height: "50px",
+                                                verticalAlign: "middle",
+                                                cursor: "help",
+                                              }}
+                                            />
+                                          ) : (
+                                            <span
+                                              style={{
+                                                fontSize: "14px",
+                                                fontWeight: "bold",
+                                                height: "57px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                              }}
+                                            >
+                                              {value}
+                                            </span>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div
+                          className="mobile-only-cards"
+                          style={{ display: "none" }}
+                        >
+                          {Array.from({ length: rowCount }).map((_, r) => {
+                            const isLocked =
+                              !!selectedRecord.sheetContent[
+                                `locked-${pIdx}-${r}`
+                              ];
+
+                            const getVal = (idx) =>
+                              selectedRecord.sheetContent[
+                                `${pIdx}-${r}-${idx}`
+                              ] || "";
+
+                            const renderItems = (indices, catName) => {
+                              return indices.map((idx) => {
+                                const val = getVal(idx);
+                                if (!val) return null;
+                                const imgUrl = itemImages[catName]?.[val];
+                                return imgUrl ? (
+                                  <img
+                                    key={idx}
+                                    src={imgUrl}
+                                    alt={val}
+                                    title={val}
+                                    style={{
+                                      width: "35px",
+                                      height: "35px",
+                                      borderRadius: "4px",
+                                      background: "#333",
+                                    }}
+                                  />
+                                ) : (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      fontSize: "12px",
+                                      color: "#fff",
+                                      padding: "2px",
+                                    }}
+                                  >
+                                    {val}
+                                  </span>
+                                );
+                              });
+                            };
+
+                            return (
+                              <div
+                                key={r}
+                                style={{
+                                  background: "#2a2a2a",
+                                  padding: "10px",
+                                  marginBottom: "10px",
+                                  borderRadius: "8px",
+                                  border: "1px solid #444",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginBottom: "8px",
+                                  }}
+                                >
+                                  <strong
+                                    style={{
+                                      fontSize: "16px",
+                                      color: "#ffcc00",
+                                    }}
+                                  >
+                                    {r + 1}번 슬롯
+                                  </strong>
+                                  {!isLocked ? (
+                                    <button
+                                      className="sheetBtn"
+                                      onClick={() =>
+                                        handleInitiateConfirm(pIdx, r)
+                                      }
+                                    >
+                                      참 여
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="redBtn"
+                                      onClick={() => handleUnlock(pIdx, r)}
+                                    >
+                                      삭 제
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* 1. 롤/길드/이름 */}
+                                <div
+                                  style={{
+                                    fontSize: "13px",
+                                    color: "#ccc",
+                                    marginBottom: "10px",
+                                  }}
+                                >
+                                  {getVal(0) || "직책"} | {getVal(1) || "-"} |{" "}
+                                  <span
+                                    style={{
+                                      color: getVal(2) ? "#fff" : "#ffcc00", // 값이 있으면 흰색, 없으면 노란색("참여 가능")
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    {getVal(2) || "참여 가능"}
+                                  </span>
+                                </div>
+
+                                {/* 2. 장비 영역 (2단 그리드) */}
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    gap: "10px",
+                                    marginBottom: "10px",
+                                  }}
+                                >
+                                  <div>
+                                    <div
+                                      style={{
+                                        fontSize: "10px",
+                                        color: "#888",
+                                        marginBottom: "2px",
+                                      }}
+                                    >
+                                      무기/보조
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "2px",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {renderItems([3], "weapons")}
+                                      {renderItems([4], "OffHand")}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div
+                                      style={{
+                                        fontSize: "10px",
+                                        color: "#888",
+                                        marginBottom: "2px",
+                                      }}
+                                    >
+                                      방어구
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "2px",
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {renderItems([5, 6], "Helmet")}
+                                      {renderItems([7, 8], "Armor")}
+                                      {renderItems([9, 10], "Shoes")}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* 3. 기타 영역 (줄바꿈) */}
+                                <div style={{ marginBottom: "10px" }}>
+                                  <div
+                                    style={{
+                                      fontSize: "10px",
+                                      color: "#888",
+                                      marginBottom: "2px",
+                                    }}
+                                  >
+                                    케이프 / 푸드 / 포션
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: "4px",
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    {renderItems([11, 12], "Cape")}
+                                    {renderItems([13, 14], "Food")}
+                                    {renderItems([15, 16], "Potion")}
+                                  </div>
+                                </div>
+
+                                {/* 4. 코멘트 */}
+                                {getVal(17) && (
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      background: "#1a1a1a",
+                                      padding: "6px",
+                                      borderRadius: "4px",
+                                      color: "#aaa",
+                                    }}
+                                  >
+                                    {getVal(17)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   });

@@ -1,5 +1,15 @@
+.responsive-text {
+    /* 최소 12px, 화면의 1.2vw, 최대 18px */
+    font-size: clamp(12px, 1.2vw, 18px);
+}
+
+.responsive-title {
+    /* 제목용: 조금 더 크게 */
+    font-size: clamp(16px, 2vw, 24px);
+}
+
 .sheetBtn {
-    padding: 10px;
+    padding: clamp(8px, 0.5vw, 10px);
     cursor: pointer;
 
     /* 톤앤매너 유지 */
@@ -10,7 +20,7 @@
     /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
 
     /* 고급스러운 폰트 느낌 */
-    font-size: 16px;
+    font-size: clamp(12px, 1.2vw, 18px);
     font-weight: 500;
 
     /* 부드러운 전환 효과 */
@@ -25,7 +35,7 @@
 }
 
 .redBtn {
-    padding: 10px;
+    padding: clamp(8px, 0.5vw, 10px);
     cursor: pointer;
     /* 톤앤매너 유지 */
     background: transparent;
@@ -35,7 +45,7 @@
     /* 작은 버튼은 반경을 조금 작게 하는 것이 깔끔합니다 */
 
     /* 고급스러운 폰트 느낌 */
-    font-size: 16px;
+    font-size: clamp(12px, 1.2vw, 18px);
     font-weight: 500;
 
     /* 부드러운 전환 효과 */
@@ -46,4 +56,60 @@
 .redBtn:hover {
     color: #ff4d4d;
     box-shadow: 0 0 8px rgba(255, 111, 145, 0.4);
+}
+
+/* 기본 PC 모드: 기존 테이블 표시 */
+.desktop-only-table {
+    display: table;
+    /* 테이블 형식 유지 */
+}
+
+.mobile-only-cards {
+    display: none;
+    /* PC에서는 숨김 */
+}
+
+@media screen and (max-width: 1000px) {
+
+    /* 모달 내부 테이블 숨김 */
+    .desktop-only-table {
+        display: none !important;
+    }
+
+    /* 모달 내부 카드 뷰 표시 (추가할 클래스) */
+    .mobile-only-cards {
+        display: block !important;
+    }
+
+    .party-card {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        text-align: left;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    .card-header {
+        font-size: clamp(16px, 2vw, 24px);
+        font-weight: bold;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+    }
+
+    .card-info {
+        font-size: clamp(12px, 1.2vw, 18px);
+        margin: 4px 0;
+    }
+
+    .card-footer {
+        font-size: clamp(12px, 1.2vw, 18px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
 }
