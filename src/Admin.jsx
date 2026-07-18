@@ -8,7 +8,6 @@ import {
   getDocs,
   deleteDoc,
   doc,
-  setDoc, // 추가
   query, // 추가
   where, // 추가
   updateDoc, // 추가
@@ -31,7 +30,7 @@ const Admin = ({ user, checkAndLogout }) => {
       }
     };
     verify();
-  }, []);
+  }, [checkAndLogout, navigate]);
 
   // 예비 멤버 리스트 불러오기
   const fetchPreMembers = async () => {

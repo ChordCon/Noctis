@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import "./Sheet.css";
 import { db } from "./firebase/firebase";
 import {
   collection,
-  getDocs,
   query,
   orderBy,
   doc,
@@ -12,12 +10,10 @@ import {
   updateDoc,
   deleteDoc,
   increment,
-  setDoc,
   onSnapshot,
 } from "firebase/firestore";
 
 const Sheet = ({ user, checkAndLogout }) => {
-  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [itemImages, setItemImages] = useState({});
@@ -85,6 +81,7 @@ const Sheet = ({ user, checkAndLogout }) => {
     // 컴포넌트 언마운트 시 구독 해제
     return () => unsubscribe();
   }, []); // 의존성 배열을 비워두어 컴포넌트 마운트 시 딱 한 번만 실행
+
   const handleDeleteRecord = async (e, recordId, callerName) => {
     e.stopPropagation(); // 행 클릭 이벤트(모달 열기) 방지
 

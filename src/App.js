@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { db } from "./firebase/firebase"; // 파이어베이스 설정 파일
 import { doc, getDoc, getDocs, collection, addDoc, query, where } from "firebase/firestore";
 import bcrypt from 'bcryptjs';
@@ -118,6 +118,7 @@ export default function App() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false); // [추가] 초기화 상태
 
   useEffect(() => {
     const checkSessionSecurity = async () => {
@@ -137,6 +138,7 @@ export default function App() {
           handleLogout();
         }
       }
+      setIsInitialized(true); // [추가] 검증 완료
     };
     checkSessionSecurity();
   }, []);
@@ -266,15 +268,39 @@ export default function App() {
     }
   };
 
+  if (!isInitialized) return <div className="loading">Loading...</div>;
+
   return (
     <div className="app-container">
       <Navbar user={user} onOpenModal={setModalType} onLogout={handleLogout} checkAndLogout={checkAndLogout} />
 
       <Routes>
-        <Route path="/" element={<Main user={user} navigate={navigate} checkAndLogout={checkAndLogout} />} />
-        <Route path="/admin" element={<Admin checkAndLogout={checkAndLogout} />} />
-        <Route path="/caller" element={<Caller user={user} checkAndLogout={checkAndLogout} />} />
-        <Route path="/sheet" element={<Sheet user={user} checkAndLogout={checkAndLogout} />} />
+        {/* 1. 홈 화면 */}
+        <Route
+          path="/"
+          element={<Main user={user} navigate={navigate} checkAndLogout={checkAndLogout} />}
+        />
+
+        {/* 2. 관리자 페이지 (보호됨: user가 없으면 홈으로) */}
+        <Route
+          path="/admin"
+          element={user ? <Admin checkAndLogout={checkAndLogout} /> : <Navigate to="/" replace />}
+        />
+
+        {/* 3. 콜러 페이지 (보호됨: user가 없으면 홈으로) */}
+        <Route
+          path="/caller"
+          element={user ? <Caller user={user} checkAndLogout={checkAndLogout} /> : <Navigate to="/" replace />}
+        />
+
+        {/* 4. 시트지 페이지 (보호됨: user가 없으면 홈으로) */}
+        <Route
+          path="/sheet"
+          element={user ? <Sheet user={user} checkAndLogout={checkAndLogout} /> : <Navigate to="/" replace />}
+        />
+
+        {/* 5. 잘못된 경로로 접근 시 홈으로 리다이렉트 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       {modalType && (
