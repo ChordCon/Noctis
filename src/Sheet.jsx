@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Sheet.css";
+import unKnown from "./img/UnKnown.png";
 import { db } from "./firebase/firebase";
 import {
   collection,
@@ -800,6 +801,9 @@ const Sheet = ({ user, checkAndLogout }) => {
                                       const value =
                                         selectedRecord.sheetContent[cellKey] ||
                                         "";
+                                      const cleanVal = value
+                                        .split("(")[0]
+                                        .trim();
                                       const isAdminOrCaller =
                                         user?.role === "admin" ||
                                         user?.role === "caller";
@@ -834,17 +838,20 @@ const Sheet = ({ user, checkAndLogout }) => {
                                               }}
                                             />
                                           ) : colCategoryMap[c] &&
-                                            itemImages[colCategoryMap[c]]?.[
-                                              value
-                                            ] ? (
+                                            (itemImages[colCategoryMap[c]]?.[
+                                              cleanVal
+                                            ] ||
+                                              value === "미정") ? ( // 2. cleanVal 사용
                                             <img
                                               src={
-                                                itemImages[colCategoryMap[c]][
-                                                  value
-                                                ]
+                                                value === "미정"
+                                                  ? unKnown
+                                                  : itemImages[
+                                                      colCategoryMap[c]
+                                                    ][cleanVal] // 3. cleanVal 사용
                                               }
-                                              alt={value}
-                                              title={value} // 이 줄을 추가하세요!
+                                              alt={cleanVal} // 4. 접근성을 위해 정제된 이름 사용
+                                              title={value} // 5. 툴팁에는 괄호가 포함된 원본 value 그대로 표시
                                               style={{
                                                 width: "50px",
                                                 height: "50px",
@@ -894,7 +901,26 @@ const Sheet = ({ user, checkAndLogout }) => {
                               return indices.map((idx) => {
                                 const val = getVal(idx);
                                 if (!val) return null;
-                                const imgUrl = itemImages[catName]?.[val];
+
+                                // '미정'일 경우 unKnown 이미지 반환
+                                if (val === "미정") {
+                                  return (
+                                    <img
+                                      key={idx}
+                                      src={unKnown}
+                                      alt="미정"
+                                      title="미정"
+                                      style={{
+                                        width: "35px",
+                                        height: "35px",
+                                        borderRadius: "4px",
+                                        background: "#333",
+                                      }}
+                                    />
+                                  );
+                                }
+                                const cleanVal = val.split("(")[0].trim();
+                                const imgUrl = itemImages[catName]?.[cleanVal];
                                 return imgUrl ? (
                                   <img
                                     key={idx}
