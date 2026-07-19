@@ -212,19 +212,26 @@ const Caller = ({ user, checkAndLogout }) => {
   const saveSheet = async () => {
     try {
       if (sheetConfig.id) {
-        // 기존 시트 수정 로직
+        // [수정 로직]
         const docRef = doc(db, "sheets", sheetConfig.id);
-        await updateDoc(docRef, { data: sheetData, updatedAt: new Date() });
+        const updatedFields = {
+          sheetName: sheetConfig.name,
+          rowCount: sheetConfig.rows,
+          data: sheetData,
+          updatedAt: new Date(),
+        };
 
+        await updateDoc(docRef, updatedFields);
+
+        // 목록 상태 업데이트
         setMySheets((prev) =>
           prev.map((s) =>
-            s.id === sheetConfig.id ? { ...s, data: sheetData } : s,
+            s.id === sheetConfig.id ? { ...s, ...updatedFields } : s,
           ),
         );
-
         alert("수정되었습니다!");
       } else {
-        // 신규 시트 저장 로직
+        // [신규 로직]
         const newSheetData = {
           callerName: user.name,
           sheetName: sheetConfig.name,
@@ -234,13 +241,12 @@ const Caller = ({ user, checkAndLogout }) => {
         };
 
         const docRef = await addDoc(collection(db, "sheets"), newSheetData);
+        const newSheet = { id: docRef.id, ...newSheetData };
 
-        // 신규 추가된 시트 정보를 리스트에 반영
-        setMySheets((prev) => [...prev, { id: docRef.id, ...newSheetData }]);
-
-        // 저장 후에는 신규 상태를 수정 상태로 변경 (ID 부여)
+        // 상태 추가
+        setMySheets((prev) => [newSheet, ...prev]);
+        // ID 업데이트 (이후 저장이 수정으로 인식되도록)
         setSheetConfig((prev) => ({ ...prev, id: docRef.id }));
-
         alert("저장되었습니다!");
       }
     } catch (e) {
@@ -261,16 +267,23 @@ const Caller = ({ user, checkAndLogout }) => {
         callerName: user.name,
         sheetName: newName,
         rowCount: sheetConfig.rows,
-        data: sheetData, // 현재 화면의 데이터를 그대로 복사
+        data: sheetData,
         description: sheetConfig.description || "",
         createdAt: new Date(),
       };
 
       const docRef = await addDoc(collection(db, "sheets"), newSheetData);
 
-      // 리스트에 추가하고 해당 시트를 불러옴
-      setMySheets((prev) => [...prev, { id: docRef.id, ...newSheetData }]);
-      setSheetConfig({ name: newName, rows: sheetConfig.rows, id: docRef.id });
+      // 새로 생성된 데이터를 포함한 객체 생성
+      const newSheet = { id: docRef.id, ...newSheetData };
+
+      // [목록 새로고침 및 갱신]
+      // 1. 기존 목록의 맨 앞에 새 항목을 추가하여 즉시 반영
+      setMySheets((prev) => [newSheet, ...prev]);
+
+      // 2. 현재 선택된 설정 업데이트
+      setSheetConfig((prev) => ({ ...prev, name: newName, id: docRef.id }));
+      setSelectedSheetForUpload(newSheet);
 
       alert("새로운 이름으로 저장되었습니다!");
     } catch (e) {
@@ -545,9 +558,11 @@ const Caller = ({ user, checkAndLogout }) => {
             <button
               className="callerBtn"
               onClick={() => {
+                // 1. 목록 데이터를 다시 한번 확실히 불러옴
                 fetchMySheets();
+                // 2. 화면 초기화
                 setSheetConfig(null);
-                setSheetData({}); // 필요 시 데이터 초기화
+                setSheetData({});
               }}
             >
               이 전
@@ -559,17 +574,29 @@ const Caller = ({ user, checkAndLogout }) => {
               다른 이름으로 저장
             </button>
             <button
-              onClick={() => {
+              className="callerBtn"
+              onClick={async () => {
+                // 1. 현재 작업 중인 창을 먼저 닫거나 초기화합니다.
                 setSheetConfig(null);
-                setSheetData({}); // 필요 시 데이터 초기화
+                setSheetData({});
+
+                // 2. 업로드 팝업에서 사용할 데이터를 설정합니다.
+                // 주의: setSheetConfig(null)을 했으므로,
+                // 업로드 팝업이 데이터를 직접 참조하지 않도록 별도 객체로 넘겨야 합니다.
                 setSelectedSheetForUpload({
-                  id: sheetConfig.id,
-                  sheetName: sheetConfig.name,
-                  data: sheetData, // 여기서 현재 수정 중인 sheetData가 들어가는지 확인
+                  id: null, // 혹은 필요한 임시 ID
+                  sheetName: "업로드용 시트",
+                  data: {},
                 });
+
+                // 3. 리스트를 서버에서 새로 불러옵니다 (이게 가장 중요)
+                if (typeof fetchMySheets === "function") {
+                  await fetchMySheets();
+                }
+
+                // 4. 마지막에 업로드 팝업을 엽니다.
                 setShowUploadModal(true);
               }}
-              className="callerBtn"
             >
               업로드
             </button>
@@ -906,7 +933,7 @@ const Caller = ({ user, checkAndLogout }) => {
                 <input
                   name="time"
                   type="text"
-                  placeholder="집합 시간(UTC) 시간만 입력"
+                  placeholder="집합 시간(UTC) 예)12, 12:30"
                   required
                 />
                 <input
