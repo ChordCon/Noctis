@@ -891,7 +891,8 @@ const Sheet = ({ user, checkAndLogout }) => {
                               !!selectedRecord.sheetContent[
                                 `locked-${pIdx}-${r}`
                               ];
-
+                            const isAdminOrCaller =
+                              user?.role === "admin" || user?.role === "caller";
                             const getVal = (idx) =>
                               selectedRecord.sheetContent[
                                 `${pIdx}-${r}-${idx}`
@@ -986,12 +987,14 @@ const Sheet = ({ user, checkAndLogout }) => {
                                       참 여
                                     </button>
                                   ) : (
-                                    <button
-                                      className="redBtn"
-                                      onClick={() => handleUnlock(pIdx, r)}
-                                    >
-                                      삭 제
-                                    </button>
+                                    isAdminOrCaller && (
+                                      <button
+                                        className="redBtn"
+                                        onClick={() => handleUnlock(pIdx, r)}
+                                      >
+                                        삭 제
+                                      </button>
+                                    )
                                   )}
                                 </div>
 
@@ -1001,17 +1004,68 @@ const Sheet = ({ user, checkAndLogout }) => {
                                     fontSize: "13px",
                                     color: "#ccc",
                                     marginBottom: "10px",
+                                    display: "flex",
+                                    gap: "6px",
+                                    alignItems: "center",
+                                    justifyContent: "center",
                                   }}
                                 >
-                                  {getVal(0) || "직책"} | {getVal(1) || "-"} |{" "}
-                                  <span
-                                    style={{
-                                      color: getVal(2) ? "#fff" : "#ffcc00", // 값이 있으면 흰색, 없으면 노란색("참여 가능")
-                                      fontWeight: "bold",
-                                    }}
-                                  >
-                                    {getVal(2) || "참여 가능"}
-                                  </span>
+                                  {/* c = 0 (직책/역할) */}
+                                  <span>{getVal(0) || "직책"}</span> |
+                                  {/* c = 1 (길드 등) - 관리자/콜러일 경우 모바일에서도 input 수정 지원 */}
+                                  {!isLocked && isAdminOrCaller ? (
+                                    <input
+                                      value={getVal(1)}
+                                      onChange={(e) =>
+                                        handleInputChange(
+                                          pIdx,
+                                          r,
+                                          1,
+                                          e.target.value,
+                                        )
+                                      }
+                                      placeholder="길드"
+                                      style={{
+                                        width: "60px",
+                                        background: "#444",
+                                        color: "white",
+                                        border: "none",
+                                      }}
+                                    />
+                                  ) : (
+                                    <span>{getVal(1) || "-"}</span>
+                                  )}{" "}
+                                  |
+                                  {/* c = 2 (이름 등) - 관리자/콜러일 경우 모바일에서도 input 수정 지원 */}
+                                  {!isLocked && isAdminOrCaller ? (
+                                    <input
+                                      value={getVal(2)}
+                                      onChange={(e) =>
+                                        handleInputChange(
+                                          pIdx,
+                                          r,
+                                          2,
+                                          e.target.value,
+                                        )
+                                      }
+                                      placeholder="이름"
+                                      style={{
+                                        width: "70px",
+                                        background: "#444",
+                                        color: "white",
+                                        border: "none",
+                                      }}
+                                    />
+                                  ) : (
+                                    <span
+                                      style={{
+                                        color: getVal(2) ? "#fff" : "#ffcc00",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      {getVal(2) || "참여 가능"}
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* 2. 장비 영역 (2단 그리드) */}
