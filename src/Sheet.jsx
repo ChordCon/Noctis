@@ -891,8 +891,18 @@ const Sheet = ({ user, checkAndLogout }) => {
                               !!selectedRecord.sheetContent[
                                 `locked-${pIdx}-${r}`
                               ];
+
+                            // PC 버전과 완전히 동일한 권한 및 본인 확인 로직
+                            const rowName =
+                              selectedRecord.sheetContent[`${pIdx}-${r}-2`] ||
+                              "";
                             const isAdminOrCaller =
                               user?.role === "admin" || user?.role === "caller";
+                            const isMyRow = rowName === user?.name;
+                            const canConfirm = !isLocked;
+                            const canDelete =
+                              isLocked && (isAdminOrCaller || isMyRow);
+
                             const getVal = (idx) =>
                               selectedRecord.sheetContent[
                                 `${pIdx}-${r}-${idx}`
@@ -977,7 +987,7 @@ const Sheet = ({ user, checkAndLogout }) => {
                                   >
                                     {r + 1}번 슬롯
                                   </strong>
-                                  {!isLocked ? (
+                                  {canConfirm && (
                                     <button
                                       className="sheetBtn"
                                       onClick={() =>
@@ -986,15 +996,14 @@ const Sheet = ({ user, checkAndLogout }) => {
                                     >
                                       참 여
                                     </button>
-                                  ) : (
-                                    isAdminOrCaller && (
-                                      <button
-                                        className="redBtn"
-                                        onClick={() => handleUnlock(pIdx, r)}
-                                      >
-                                        삭 제
-                                      </button>
-                                    )
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      className="redBtn"
+                                      onClick={() => handleUnlock(pIdx, r)}
+                                    >
+                                      삭 제
+                                    </button>
                                   )}
                                 </div>
 
